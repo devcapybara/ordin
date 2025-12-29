@@ -18,7 +18,7 @@ router.route('/')
   .post(checkRole(['OWNER', 'MANAGER']), checkFeatureAccess('INVENTORY'), createProduct);
 
 router.route('/:id')
-  .put(checkRole(['OWNER', 'MANAGER']), checkFeatureAccess('INVENTORY'), updateProduct)
+  .put(checkRole(['OWNER', 'MANAGER', 'KITCHEN']), updateProduct) // Kitchen needs to toggle availability
   .delete(checkRole(['OWNER', 'MANAGER']), checkFeatureAccess('INVENTORY'), deleteProduct);
 
 module.exports = router;

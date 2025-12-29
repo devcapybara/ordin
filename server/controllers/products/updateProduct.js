@@ -11,13 +11,20 @@ const updateProduct = async (req, res) => {
       return res.status(404).json({ message: 'Product not found' });
     }
 
-    product.name = name || product.name;
-    product.price = price || product.price;
-    product.category = category || product.category;
-    product.stock = stock !== undefined ? stock : product.stock;
-    product.imageUrl = imageUrl || product.imageUrl;
-    product.description = description || product.description;
-    product.isAvailable = isAvailable !== undefined ? isAvailable : product.isAvailable;
+    // Role-based Restriction: KITCHEN can only update availability and stock
+    if (req.user.role === 'KITCHEN') {
+        product.stock = stock !== undefined ? stock : product.stock;
+        product.isAvailable = isAvailable !== undefined ? isAvailable : product.isAvailable;
+    } else {
+        // Owner/Manager can update everything
+        product.name = name || product.name;
+        product.price = price || product.price;
+        product.category = category || product.category;
+        product.stock = stock !== undefined ? stock : product.stock;
+        product.imageUrl = imageUrl || product.imageUrl;
+        product.description = description || product.description;
+        product.isAvailable = isAvailable !== undefined ? isAvailable : product.isAvailable;
+    }
 
     const updatedProduct = await product.save();
     res.json(updatedProduct);

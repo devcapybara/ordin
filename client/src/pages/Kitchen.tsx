@@ -3,7 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import api from '../services/api';
 import { format } from 'date-fns';
-import { Clock, CheckCircle, ChefHat } from 'lucide-react';
+import { Clock, CheckCircle, ChefHat, LayoutList, Package } from 'lucide-react';
+import StockManagement from '../components/kitchen/StockManagement';
 
 interface OrderItem {
   _id: string;
@@ -32,6 +33,7 @@ const Kitchen: React.FC = () => {
   const { socket } = useSocket();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'ORDERS' | 'STOCK'>('ORDERS');
 
   useEffect(() => {
     fetchOrders();
@@ -102,89 +104,112 @@ const Kitchen: React.FC = () => {
       <header className="flex justify-between items-center mb-6 bg-gray-800 p-4 rounded-lg shadow-lg">
         <div className="flex items-center gap-3">
           <ChefHat className="text-white" size={32} />
-          <h1 className="text-2xl font-bold">Kitchen Display System</h1>
+          <div>
+              <h1 className="text-2xl font-bold">Kitchen Display</h1>
+              <p className="text-xs text-gray-400">Manage orders and stock</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex gap-2 text-sm">
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-yellow-500"></span> Pending</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-full bg-blue-500"></span> Cooking</span>
+          <div className="flex bg-gray-700 rounded-lg p-1">
+              <button 
+                onClick={() => setViewMode('ORDERS')}
+                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${
+                    viewMode === 'ORDERS' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                  <LayoutList size={16} /> Orders
+              </button>
+              <button 
+                onClick={() => setViewMode('STOCK')}
+                className={`px-4 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors ${
+                    viewMode === 'STOCK' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                }`}
+              >
+                  <Package size={16} /> Stock / Menu
+              </button>
           </div>
-          <button onClick={logout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors">
+          <button onClick={logout} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded transition-colors text-sm">
             Logout
           </button>
         </div>
       </header>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">Loading orders...</div>
+      {viewMode === 'STOCK' ? (
+          <div className="h-[calc(100vh-140px)] text-gray-900">
+              <StockManagement />
+          </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {orders.filter(o => o.status !== 'READY').map((order) => (
-            <div 
-              key={order._id} 
-              className={`p-4 rounded-lg border-l-4 shadow-md transition-all ${getStatusColor(order.status)}`}
-            >
-              <div className="flex justify-between items-start mb-3 border-b border-gray-700 pb-2">
-                <div>
-                  <span className="font-bold text-xl block">Table {order.tableNumber}</span>
-                  <span className="text-gray-400 text-sm">#{order._id.slice(-4)}</span>
-                </div>
-                <div className="text-right">
-                  <span className="flex items-center gap-1 text-sm font-mono text-gray-300">
-                    <Clock size={14} />
-                    {format(new Date(order.createdAt), 'HH:mm')}
-                  </span>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block
-                    ${order.status === 'PENDING' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
-                    {order.status}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-start">
-                    <div className="flex gap-2">
-                      <span className="font-bold text-lg min-w-[24px]">{item.quantity}x</span>
-                      <div>
-                        <span className="block font-medium">{item.productId.name}</span>
-                        {item.note && (
-                          <span className="text-yellow-400 text-sm italic">Note: {item.note}</span>
-                        )}
-                      </div>
+          loading ? (
+            <div className="flex justify-center items-center h-64">Loading orders...</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {orders.filter(o => o.status !== 'READY').map((order) => (
+                <div 
+                  key={order._id} 
+                  className={`p-4 rounded-lg border-l-4 shadow-md transition-all ${getStatusColor(order.status)}`}
+                >
+                  <div className="flex justify-between items-start mb-3 border-b border-gray-700 pb-2">
+                    <div>
+                      <span className="font-bold text-xl block">Table {order.tableNumber}</span>
+                      <span className="text-gray-400 text-sm">#{order._id.slice(-4)}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="flex items-center gap-1 text-sm font-mono text-gray-300">
+                        <Clock size={14} />
+                        {format(new Date(order.createdAt), 'HH:mm')}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded mt-1 inline-block
+                        ${order.status === 'PENDING' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
+                        {order.status}
+                      </span>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="mt-auto pt-2 border-t border-gray-700">
-                {order.status === 'PENDING' && (
-                  <button 
-                    onClick={() => updateStatus(order._id, 'COOKING')}
-                    className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
-                  >
-                    <ChefHat size={20} /> Start Cooking
-                  </button>
-                )}
-                {order.status === 'COOKING' && (
-                  <button 
-                    onClick={() => updateStatus(order._id, 'READY')}
-                    className="w-full bg-green-600 hover:bg-green-700 py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle size={20} /> Mark Ready
-                  </button>
-                )}
-              </div>
+                  <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
+                    {order.items.map((item, idx) => (
+                      <div key={idx} className="flex justify-between items-start">
+                        <div className="flex gap-2">
+                          <span className="font-bold text-lg min-w-[24px]">{item.quantity}x</span>
+                          <div>
+                            <span className="block font-medium">{item.productId.name}</span>
+                            {item.note && (
+                              <span className="text-yellow-400 text-sm italic">Note: {item.note}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t border-gray-700">
+                    {order.status === 'PENDING' && (
+                      <button 
+                        onClick={() => updateStatus(order._id, 'COOKING')}
+                        className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <ChefHat size={20} /> Start Cooking
+                      </button>
+                    )}
+                    {order.status === 'COOKING' && (
+                      <button 
+                        onClick={() => updateStatus(order._id, 'READY')}
+                        className="w-full bg-green-600 hover:bg-green-700 py-3 rounded font-bold transition-colors flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle size={20} /> Mark Ready
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {orders.filter(o => o.status !== 'READY').length === 0 && (
+                <div className="col-span-full flex flex-col items-center justify-center text-gray-500 py-20">
+                  <ChefHat size={64} className="mb-4 opacity-50" />
+                  <p className="text-xl">No active orders</p>
+                  <p>Waiting for new orders...</p>
+                </div>
+              )}
             </div>
-          ))}
-          {orders.filter(o => o.status !== 'READY').length === 0 && (
-            <div className="col-span-full flex flex-col items-center justify-center text-gray-500 py-20">
-              <ChefHat size={64} className="mb-4 opacity-50" />
-              <p className="text-xl">No active orders</p>
-              <p>Waiting for new orders...</p>
-            </div>
-          )}
-        </div>
+          )
       )}
     </div>
   );
