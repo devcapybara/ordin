@@ -1,0 +1,205 @@
+DOKUMEN SPESIFIKASI & PANDUAN DEVELOPER
+PROYEK: APLIKASI SAAS POS MANAGEMENT (MERN STACK)
+DEVELOPER: Aldy Rian
+-----------------------------------------------------------
+
+BAGIAN 1: PANDUAN ROLE & HAK AKSES (RBAC)
+=========================================
+
+Sistem menggunakan model SaaS (Software as a Service) dengan total 7 Role yang terbagi dalam 2 level.
+
+A. LEVEL SAAS (INTERNAL DEVELOPER)
+----------------------------------
+1. SUPER ADMIN (Anda)
+   - Deskripsi: Pemilik aplikasi/platform. Tidak terikat pada restoran manapun.
+   - Hak Akses:
+     * Manajemen Tenant: Membuat, mengedit, menghapus akun Restoran.
+     * Kontrol Langganan: Mengaktifkan/mematikan akses restoran berdasarkan status pembayaran.
+     * Monitoring Global: Melihat kesehatan server dan total user aktif.
+     * Maintenance: Mengirim notifikasi broadcast ke seluruh user.
+
+B. LEVEL TENANT (KLIEN RESTORAN)
+--------------------------------
+Setiap data di level ini WAJIB dibatasi oleh `restaurantId`.
+
+2. OWNER (Pemilik Restoran)
+   - Deskripsi: Pembeli langganan aplikasi.
+   - Hak Akses:
+     * Full Dashboard: Melihat laporan laba/rugi, penjualan, dan performa pegawai.
+     * Staff Management: Membuat akun untuk Kasir, Dapur, dll.
+     * Billing: Melihat status langganan aplikasi dan melakukan pembayaran ke Super Admin.
+     * Menu Management: Mengatur harga, foto, dan kategori menu.
+
+3. MANAGER
+   - Deskripsi: Pengelola operasional harian.
+   - Hak Akses: Mirip Owner, TAPI tidak bisa mengakses menu Billing/Langganan SaaS & Laba Bersih sensitif.
+
+4. KASIR (Front Office)
+   - Device: PC Desktop / Tablet.
+   - Deskripsi: Ujung tombak pembayaran.
+   - Hak Akses:
+     * Input Order & Proses Pembayaran (Tunai/Non-tunai).
+     * Buka/Tutup Shift Kasir (Rekap uang modal).
+     * Void/Refund Transaksi (Biasanya butuh PIN Manager).
+     * Cetak Struk.
+
+5. PELAYAN / WAITER (Mobile User)
+   - Device: Smartphone.
+   - Deskripsi: Melayani pelanggan di meja.
+   - Hak Akses:
+     * Input Order Digital: Kirim pesanan langsung ke Dapur dari meja.
+     * Table Status: Cek meja kosong/isi.
+     * Call Bill: Meminta Kasir mencetak tagihan.
+     * Notifikasi: Menerima info jika makanan sudah siap saji.
+
+6. DAPUR / KITCHEN (Back Office)
+   - Device: Tablet / Layar Besar (KDS - Kitchen Display System).
+   - Deskripsi: Tim produksi makanan.
+   - Hak Akses:
+     * View Order: Melihat antrean pesanan masuk secara real-time.
+     * Update Status: Mengubah status 'Pending' -> 'Cooking' -> 'Ready'.
+     * Stock Toggle: Mematikan menu (Sold Out) jika bahan habis.
+
+7. AKUNTAN / FINANCE
+   - Deskripsi: Tim administrasi keuangan.
+   - Hak Akses:
+     * Read-Only: Melihat riwayat transaksi (tidak bisa ubah/hapus).
+     * Expense Input: Mencatat pengeluaran operasional (Gaji, Listrik, Belanja Pasar).
+     * Export Data: Download laporan (Excel/PDF).
+
+-----------------------------------------------------------
+
+BAGIAN 2: PANDUAN TEKNIS DEVELOPER (BLUEPRINT)
+==============================================
+
+I. INSTRUKSI DEPLOYMENT
+-----------------------
+Aplikasi ini dirancang untuk di-deploy pada lingkungan Server Produksi (VPS/Cloud) yang menjalankan:
+- Node.js Runtime Environment.
+- MongoDB Database Server.
+- Nginx sebagai Reverse Proxy.
+*Pastikan kode backend siap untuk environment production (environment variables, security headers, compression).*
+
+II. STRUKTUR DATABASE (MONGOOSE SCHEMA)
+---------------------------------------
+Penting: Gunakan strategi "Shared Database, Separate Collections Logic".
+Setiap dokumen milik Tenant WAJIB memiliki field `restaurantId`.
+
+1. Collection: RESTAURANTS
+   (Menyimpan data pelanggan SaaS Anda)
+   {
+     _id: ObjectId,
+     name: String,
+     ownerEmail: String,
+     phone: String,
+     subscriptionStatus: { type: String, enum: ['active', 'inactive', 'grace_period'] },
+     subscriptionExpiry: Date,
+     configs: { tax: Number, serviceCharge: Number }
+   }
+
+2. Collection: USERS
+   {
+     _id: ObjectId,
+     restaurantId: { type: ObjectId, ref: 'Restaurant', default: null }, // Null = Super Admin
+     username: String,
+     password: String (Hashed),
+     role: { type: String, enum: ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN', 'ACCOUNTANT'] },
+     pin: String // Untuk login cepat Waiter/Kasir
+   }
+
+3. Collection: PRODUCTS
+   {
+     restaurantId: { type: ObjectId, ref: 'Restaurant' },
+     name: String,
+     price: Number,
+     category: String,
+     isAvailable: Boolean, // Kontrol Dapur
+     stock: Number
+   }
+
+4. Collection: ORDERS
+   {
+     restaurantId: { type: ObjectId, ref: 'Restaurant' },
+     tableNumber: String,
+     waiterId: { type: ObjectId, ref: 'User' },
+     items: [{ productId: ObjectId, qty: Number, note: String, status: String }],
+     status: { type: String, enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PAID'] },
+     totalAmount: Number,
+     paymentMethod: String,
+     createdAt: Date
+   }
+
+III. LOGIKA BACKEND & MIDDLEWARE
+--------------------------------
+1. Auth Middleware:
+   - Verifikasi JWT Token pada setiap request.
+   - Attach `req.user` dengan data payload (role, restaurantId).
+
+2. Tenant Restriction Middleware (CRITICAL):
+   - Setiap request ke API data (Order/Product) harus mengecek `subscriptionStatus` dari `restaurantId` user.
+   - Jika status `inactive`, tolak request dengan 403 Forbidden.
+
+3. Role Middleware:
+   - Contoh: `checkRole(['OWNER', 'MANAGER'])` untuk edit menu.
+   - Contoh: `checkRole(['WAITER', 'CASHIER'])` untuk input order.
+
+IV. REAL-TIME LOGIC (SOCKET.IO)
+-------------------------------
+Gunakan "Rooms" untuk memisahkan data antar restoran.
+Pattern: `io.to('restaurant_' + restaurantId).emit(...)`
+
+Skenario:
+1. Waiter Input Order -> Server simpan DB -> Server Emit 'NEW_ORDER' ke Room Dapur.
+2. Dapur update 'COOKING' -> Server Emit 'UPDATE_STATUS' ke Room Waiter/Kasir.
+3. Dapur update 'READY' -> Server Emit 'FOOD_READY' ke Room Waiter (Notifikasi HP bergetar).
+
+V. STRUKTUR FOLDER PROJECT (MERN)
+---------------------------------
+/root
+  /server
+    /config (DB connection, Socket config)
+    /controllers (Logic handler)
+    /middlewares (Auth, Role, TenantCheck)
+    /models (Mongoose Schemas)
+    /routes (API endpoints)
+    /utils (Helpers)
+    server.js (Entry point)
+  /client
+    /src
+      /components (Reusable UI)
+      /context (AuthContext, SocketContext)
+      /hooks (Custom hooks)
+      /pages (Dashboard, POS, KitchenView, WaiterView)
+      /services (API calls)
+
+VI. UI/UX & BRANDING GUIDELINES (NEW)
+-------------------------------------
+1. KONSEP DESAIN
+   - Style: Modern Minimalist. Hindari clutter. Gunakan card layout.
+   - Font: Inter atau Public Sans (Terbaca jelas di layar kecil).
+   - Mode: Support Dark Mode & Light Mode (Toggle di Navbar).
+     * Light Mode: Background #F3F4F6, Card #FFFFFF, Text #1F2937.
+     * Dark Mode: Background #111827, Card #1F2937, Text #F9FAFB.
+
+2. DYNAMIC BRANDING (CUSTOM OWNER)
+   Setiap Tenant bisa mengubah tampilan aplikasi agar sesuai identitas resto mereka.
+   
+   A. Database Update (Collection: RESTAURANTS)
+      Tambahkan field object 'branding':
+      {
+         ...
+         branding: {
+            appDisplayName: String, // Contoh: "Kopi Kenangan POS"
+            logoUrl: String,        // URL gambar dari upload
+            primaryColor: String,   // HEX Code, misal: "#FF5733"
+            secondaryColor: String  // HEX Code
+         }
+      }
+
+   B. Implementasi Frontend (React)
+      - Gunakan Context API (ThemeContext) untuk fetch data branding saat login.
+      - Inject warna ke CSS Variables di root document:
+        document.documentElement.style.setProperty('--primary-color', branding.primaryColor);
+      
+      - Contoh penggunaan di CSS/Tailwind:
+        .btn-primary { background-color: var(--primary-color); }
