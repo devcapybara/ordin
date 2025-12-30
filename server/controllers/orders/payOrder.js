@@ -26,9 +26,9 @@ const payOrder = async (req, res) => {
     order.changeAmount = paymentResult.changeAmount;
     
     // Sync main status if Paid
-    if (order.payment.status === 'PAID') {
-        order.status = 'PAID';
-    }
+    // if (order.payment.status === 'PAID') {
+    //     order.status = 'PAID';
+    // }
 
     await order.save();
 

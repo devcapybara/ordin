@@ -7,8 +7,9 @@ import Modal from '../components/ui/Modal';
 import TableGrid from '../components/waiter/TableGrid';
 import Receipt from '../components/pos/Receipt';
 import PaymentModal from '../components/pos/PaymentModal';
+import TransactionHistoryModal from '../components/pos/TransactionHistoryModal';
 import { useReactToPrint } from 'react-to-print';
-import { Plus, Minus, Trash2, LogOut, CheckCircle, LayoutGrid, Printer, RefreshCw, Search } from 'lucide-react';
+import { Plus, Minus, Trash2, LogOut, CheckCircle, LayoutGrid, Printer, RefreshCw, Search, History } from 'lucide-react';
 
 interface Product {
   _id: string;
@@ -40,6 +41,16 @@ const POS: React.FC = () => {
   const [activeBill, setActiveBill] = useState<any>(null);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  const [configs, setConfigs] = useState({ 
+    tax: 0.1, 
+    serviceCharge: 0.05,
+    restaurantName: '',
+    address: '',
+    phone: '',
+    receiptFooter: ''
+  });
 
   const receiptRef = useRef<HTMLDivElement>(null);
   const handlePrint = useReactToPrint({
@@ -48,7 +59,33 @@ const POS: React.FC = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchConfigs();
   }, []);
+
+  const fetchConfigs = async () => {
+    try {
+      const { data } = await api.get('/restaurant/configs');
+      // API returns Restaurant object: { name, address, phone, configs: { tax, serviceCharge, ... } }
+      setConfigs({
+        tax: data.configs?.tax ?? 0.1,
+        serviceCharge: data.configs?.serviceCharge ?? 0.05,
+        restaurantName: data.name || 'Ordin Restaurant',
+        address: data.address || '',
+        phone: data.phone || '',
+        receiptFooter: data.configs?.receiptFooter || ''
+      });
+    } catch (error) {
+      console.error('Failed to fetch configs');
+    }
+  };
+
+  const handleReprint = (order: any) => {
+    setLastOrder(order);
+    // Wait for state update then print
+    setTimeout(() => {
+      handlePrint && handlePrint();
+    }, 100);
+  };
 
   const fetchProducts = async () => {
     try {
@@ -134,18 +171,53 @@ const POS: React.FC = () => {
 
   const calculateTotal = () => {
     if (activeBill) return activeBill.totalAmount;
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0) * 1.11;
+    const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+    const tax = subtotal * configs.tax;
+    const service = subtotal * configs.serviceCharge;
+    return Math.round(subtotal + tax + service);
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = async (action: 'SAVE' | 'PAY' = 'PAY') => {
     if (!activeBill && cart.length === 0) return;
     if (!selectedTable && !activeBill) {
         setIsTableModalOpen(true);
         return;
     }
     
-    // Open Payment Modal instead of immediate checkout
-    setIsPaymentModalOpen(true);
+    if (action === 'PAY') {
+        setIsPaymentModalOpen(true);
+    } else {
+        await handleSaveOrder();
+    }
+  };
+
+  const handleSaveOrder = async () => {
+      setProcessing(true);
+      try {
+          const totalAmount = calculateTotal();
+          
+          if (activeBill) {
+              // If active bill exists, maybe update it? (Not implemented yet, just alert)
+              alert('Order is already saved/active. Use Pay Bill to finish.');
+          } else {
+              // Create new order
+              const { data } = await api.post('/orders', {
+                  items: cart,
+                  tableNumber: selectedTable,
+                  totalAmount,
+                  paymentMethod: 'PAY_LATER',
+                  paymentStatus: 'PENDING'
+              });
+              setLastOrder(data);
+              alert('Order Saved to Table ' + selectedTable);
+              clearCurrent();
+          }
+      } catch (error: any) {
+          console.error('Save failed', error);
+          alert('Failed to save order');
+      } finally {
+          setProcessing(false);
+      }
   };
 
   const handlePaymentConfirm = async (paymentPayload: any) => {
@@ -222,6 +294,12 @@ const POS: React.FC = () => {
                 className={`px-4 py-2 rounded font-medium ${viewMode === 'TABLES' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}
             >
                 Tables (Bill)
+            </button>
+            <button 
+                onClick={() => setIsHistoryOpen(true)}
+                className="px-4 py-2 rounded font-medium bg-gray-100 hover:bg-gray-200 flex items-center gap-2 text-gray-700"
+            >
+                <History size={18} /> History
             </button>
           </div>
         </div>
@@ -432,9 +510,25 @@ const POS: React.FC = () => {
             <div className="space-y-2">
                 {/* Simplified Total Calculation */}
                 {activeBill ? (
-                     <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t">
-                        <span>Total Bill</span>
-                        <span>Rp {activeBill.totalAmount.toLocaleString('id-ID')}</span>
+                     <div className="space-y-2">
+                         <div className="flex justify-between text-gray-600">
+                             <span>Subtotal</span>
+                             <span>Rp {activeBill.items.reduce((t: number, i: any) => t + (i.unitPrice * i.quantity), 0).toLocaleString('id-ID')}</span>
+                         </div>
+                         <div className="flex justify-between text-gray-600">
+                             <span>Tax ({(configs.tax * 100).toFixed(0)}%)</span>
+                             <span>Rp {(activeBill.items.reduce((t: number, i: any) => t + (i.unitPrice * i.quantity), 0) * configs.tax).toLocaleString('id-ID')}</span>
+                         </div>
+                         {configs.serviceCharge > 0 && (
+                             <div className="flex justify-between text-gray-600">
+                                 <span>Service ({(configs.serviceCharge * 100).toFixed(0)}%)</span>
+                                 <span>Rp {(activeBill.items.reduce((t: number, i: any) => t + (i.unitPrice * i.quantity), 0) * configs.serviceCharge).toLocaleString('id-ID')}</span>
+                             </div>
+                         )}
+                         <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t">
+                            <span>Total Bill</span>
+                            <span>Rp {activeBill.totalAmount.toLocaleString('id-ID')}</span>
+                         </div>
                      </div>
                 ) : (
                     <>
@@ -443,9 +537,15 @@ const POS: React.FC = () => {
                         <span>Rp {cart.reduce((t, i) => t + i.price * i.quantity, 0).toLocaleString('id-ID')}</span>
                     </div>
                     <div className="flex justify-between text-gray-600">
-                        <span>Tax (11%)</span>
-                        <span>Rp {(cart.reduce((t, i) => t + i.price * i.quantity, 0) * 0.11).toLocaleString('id-ID')}</span>
+                        <span>Tax ({(configs.tax * 100).toFixed(0)}%)</span>
+                        <span>Rp {(cart.reduce((t, i) => t + i.price * i.quantity, 0) * configs.tax).toLocaleString('id-ID')}</span>
                     </div>
+                    {configs.serviceCharge > 0 ? (
+                        <div className="flex justify-between text-gray-600">
+                            <span>Service ({(configs.serviceCharge * 100).toFixed(0)}%)</span>
+                            <span>Rp {(cart.reduce((t, i) => t + i.price * i.quantity, 0) * configs.serviceCharge).toLocaleString('id-ID')}</span>
+                        </div>
+                    ) : null}
                     <div className="flex justify-between text-xl font-bold text-gray-900 pt-2 border-t">
                         <span>Total</span>
                         <span>Rp {calculateTotal().toLocaleString('id-ID')}</span>
@@ -454,20 +554,29 @@ const POS: React.FC = () => {
                 )}
             </div>
             
-            <Button 
-              className="w-full py-3 text-lg shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={(cart.length === 0 && !activeBill) || processing || isOrderPaid}
-              onClick={handleCheckout}
-            >
-              {processing ? 'Processing...' : (activeBill ? (isOrderPaid ? 'Paid' : 'Pay Bill') : 'Pay Now')}
-            </Button>
+            <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  className="w-full py-3 text-lg bg-white text-blue-600 border border-blue-200 hover:bg-blue-50"
+                  disabled={(cart.length === 0 && !activeBill) || processing || isOrderPaid}
+                  onClick={() => handleCheckout('SAVE')}
+                >
+                  {processing ? '...' : 'Save Order'}
+                </Button>
+                <Button 
+                  className="w-full py-3 text-lg shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={(cart.length === 0 && !activeBill) || processing || isOrderPaid}
+                  onClick={() => handleCheckout('PAY')}
+                >
+                  {processing ? 'Processing...' : (activeBill ? (isOrderPaid ? 'Paid' : 'Pay Bill') : 'Pay Now')}
+                </Button>
+            </div>
           </div>
         </Card>
       </div>
 
       {/* Hidden Receipt for Printing */}
       <div className="hidden">
-        <Receipt ref={receiptRef} order={lastOrder} />
+        <Receipt ref={receiptRef} order={lastOrder} configs={configs} />
       </div>
 
       <PaymentModal 
@@ -475,6 +584,12 @@ const POS: React.FC = () => {
         onClose={() => setIsPaymentModalOpen(false)}
         totalAmount={calculateTotal()}
         onConfirm={handlePaymentConfirm}
+      />
+
+      <TransactionHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onReprint={handleReprint}
       />
 
       <Modal

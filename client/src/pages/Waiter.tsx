@@ -3,17 +3,33 @@ import { useAuth } from '../context/AuthContext';
 import TableGrid from '../components/waiter/TableGrid';
 import MobileMenu from '../components/waiter/MobileMenu';
 import OrderHistory from '../components/waiter/OrderHistory';
+import Button from '../components/ui/Button';
 import api from '../services/api';
-import { LayoutGrid, History, LogOut, ChevronLeft } from 'lucide-react';
+import { LayoutGrid, History, LogOut, ChevronLeft, CheckCircle } from 'lucide-react';
 
 const Waiter: React.FC = () => {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState<'tables' | 'orders'>('tables');
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [selectedTableStatus, setSelectedTableStatus] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
 
-  const handleSelectTable = (table: string) => {
+  const handleSelectTable = (table: string, status?: string) => {
     setSelectedTable(table);
+    setSelectedTableStatus(status || null);
+  };
+
+  const handleClearTable = async () => {
+    if (!selectedTable) return;
+    try {
+      await api.post('/tables/clear', { tableNumber: selectedTable });
+      // alert('Table cleared!'); // Optional feedback
+      setSelectedTable(null);
+      setSelectedTableStatus(null);
+    } catch (error) {
+      console.error('Failed to clear table', error);
+      alert('Failed to clear table');
+    }
   };
 
   const handlePlaceOrder = async (items: any[]) => {
@@ -31,6 +47,7 @@ const Waiter: React.FC = () => {
       // Don't clear table immediately, let user decide when to leave
       alert('Order sent to kitchen!');
       setSelectedTable(null); // Return to table grid
+      setSelectedTableStatus(null);
       setActiveTab('orders'); // Switch to orders view to see status
     } catch (error) {
       console.error('Failed to place order', error);
@@ -46,6 +63,57 @@ const Waiter: React.FC = () => {
     }
 
     if (selectedTable) {
+      // If table is Dirty or Paid, show Clear Table option
+      if (selectedTableStatus === 'DIRTY' || selectedTableStatus === 'PAID') {
+        return (
+          <div className="flex flex-col h-full bg-white">
+            <div className="bg-white border-b p-3 flex items-center gap-2 sticky top-0 z-10">
+              <button 
+                onClick={() => setSelectedTable(null)}
+                className="p-2 hover:bg-gray-100 rounded-full"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <h2 className="text-lg font-bold">Table {selectedTable}</h2>
+            </div>
+            
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-6">
+              <div className={`p-6 rounded-full ${selectedTableStatus === 'DIRTY' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-50 text-yellow-600'}`}>
+                <CheckCircle size={64} />
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-bold text-gray-800 mb-2">
+                  Table is {selectedTableStatus}
+                </h3>
+                <p className="text-gray-500">
+                  {selectedTableStatus === 'DIRTY' 
+                    ? 'This table needs cleaning before seating new customers.' 
+                    : 'Payment has been completed. Is the table ready for the next customer?'}
+                </p>
+              </div>
+
+              <div className="w-full space-y-3">
+                <Button 
+                  onClick={handleClearTable} 
+                  className="w-full py-4 text-lg font-bold shadow-lg shadow-blue-200"
+                >
+                  Mark as Clean / Free
+                </Button>
+                
+                <Button 
+                  variant="secondary" 
+                  onClick={() => setSelectedTable(null)} 
+                  className="w-full py-3"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex flex-col h-full">
           <div className="bg-white border-b p-3 flex items-center gap-2 sticky top-0 z-10">

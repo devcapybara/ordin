@@ -62,11 +62,13 @@ const createOrder = async (req, res) => {
       })),
       totalAmount,
       // New Payment Structure
-      payment: paymentData,
-      ...extraData,
-      
-      status: paymentData.status === 'PAID' ? 'PAID' : 'PENDING'
-    });
+       payment: paymentData,
+       ...extraData,
+       
+       // CRITICAL FIX: Order status should remain PENDING (for Kitchen) even if Payment is PAID.
+       // Only payment.status tracks the money. 'status' tracks the fulfillment.
+       status: 'PENDING'
+     });
 
     // Populate product details for the response and socket event
     const populatedOrder = await Order.findById(order._id)

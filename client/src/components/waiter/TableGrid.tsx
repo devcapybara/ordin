@@ -3,7 +3,7 @@ import api from '../../services/api';
 import { useSocket } from '../../context/SocketContext';
 
 interface TableGridProps {
-  onSelectTable: (table: string) => void;
+  onSelectTable: (table: string, status?: string) => void;
   selectedTable: string | null;
   allowSelectionWhenOccupied?: boolean;
 }
@@ -59,13 +59,19 @@ const TableGrid: React.FC<TableGridProps> = ({ onSelectTable, selectedTable, all
   return (
     <div className="grid grid-cols-3 gap-4 p-4">
       {tables.map((table) => {
-        const isOccupied = table.status !== 'AVAILABLE';
-        const isDisabled = isOccupied && !allowSelectionWhenOccupied;
+        // Waiter Logic:
+        // - AVAILABLE: Can Click (To Order)
+        // - OCCUPIED: Disabled (Can't double book) -> Unless allowSelectionWhenOccupied is true (POS mode)
+        // - DIRTY/PAID: Can Click (To Clear) -> Waiter needs to select it to clear it
+        
+        const isOccupied = table.status === 'OCCUPIED' || table.status === 'SERVED';
+        // Only disable if it's Occupied AND we are not in "Allow All" mode (POS) AND it's not Dirty/Paid (which needs clearing)
+        const isDisabled = isOccupied && !allowSelectionWhenOccupied && table.status !== 'DIRTY' && table.status !== 'PAID';
         
         return (
           <button
             key={table.number}
-            onClick={() => !isDisabled && onSelectTable(table.number)}
+            onClick={() => !isDisabled && onSelectTable(table.number, table.status)}
             disabled={isDisabled}
             className={`aspect-square rounded-xl shadow-sm flex flex-col items-center justify-center border-2 transition-all ${getTableColor(
               table.status,
