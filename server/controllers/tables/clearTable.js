@@ -16,10 +16,10 @@ const clearTable = async (req, res) => {
       return res.status(404).json({ message: 'No active order found for this table' });
     }
 
-    // Optional: Check if Paid
-    // if (order.paymentStatus !== 'PAID') {
-    //   return res.status(400).json({ message: 'Cannot clear table before payment' });
-    // }
+    // STRICT: Cannot clear table if order is not fully PAID
+    if (order.status !== 'PAID') {
+      return res.status(400).json({ message: 'Cannot clear table. Order is not fully paid.' });
+    }
 
     order.status = 'COMPLETED';
     await order.save();

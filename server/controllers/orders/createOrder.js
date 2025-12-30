@@ -1,15 +1,46 @@
 const Order = require('../../models/Order');
+const Product = require('../../models/Product');
+const Ingredient = require('../../models/Ingredient');
 const { getIO } = require('../../config/socket');
 const logActivity = require('../../utils/logger/logActivity');
 const paymentService = require('../../services/payment.service');
 
 const createOrder = async (req, res) => {
   try {
-    const { items, tableNumber, totalAmount, paymentPayload } = req.body;
+    const { items, tableNumber, totalAmount, paymentPayload, subtotal, taxAmount, serviceChargeAmount, discountAmount, promoCode } = req.body;
 
     if (!items || items.length === 0) {
       return res.status(400).json({ message: 'No order items' });
     }
+
+    // [INVENTORY LOGIC] Deduct Stock
+    // 1. Get all product IDs
+    const productIds = items.map(item => item._id);
+    const products = await Product.find({ _id: { $in: productIds } }).populate('recipe.ingredientId');
+
+    // 2. Calculate total ingredient usage
+    const ingredientUpdates = {}; // { ingredientId: totalAmountToDeduct }
+
+    for (const item of items) {
+        const product = products.find(p => p._id.toString() === item._id);
+        if (product && product.recipe && product.recipe.length > 0) {
+            for (const ing of product.recipe) {
+                if (ing.ingredientId) {
+                    const deduction = ing.quantity * item.quantity;
+                    const ingId = ing.ingredientId._id.toString();
+                    ingredientUpdates[ingId] = (ingredientUpdates[ingId] || 0) + deduction;
+                }
+            }
+        }
+    }
+
+    // 3. Update Ingredients (Parallel)
+    // Note: We allow stock to go negative for now to not block sales
+    const updatePromises = Object.keys(ingredientUpdates).map(ingId => 
+        Ingredient.findByIdAndUpdate(ingId, { $inc: { currentStock: -ingredientUpdates[ingId] } })
+    );
+    await Promise.all(updatePromises);
+
 
     // Check if table is occupied (has any order not COMPLETED or CANCELLED)
     const activeOrder = await Order.findOne({
@@ -61,6 +92,11 @@ const createOrder = async (req, res) => {
         status: 'PENDING'
       })),
       totalAmount,
+      subtotal,
+      taxAmount,
+      serviceChargeAmount,
+      discountAmount,
+      promoCode,
       // New Payment Structure
        payment: paymentData,
        ...extraData,

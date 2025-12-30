@@ -10,7 +10,7 @@ interface TableGridProps {
 
 interface TableStatus {
   number: string;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'SERVED' | 'PAID' | 'DIRTY';
+  status: 'AVAILABLE' | 'OCCUPIED' | 'SERVED' | 'PAID' | 'DIRTY' | 'PARTIAL_PAID';
   orderId: string | null;
 }
 
@@ -34,6 +34,7 @@ const TableGrid: React.FC<TableGridProps> = ({ onSelectTable, selectedTable, all
       socket.on('new_order', fetchTableStatus);
       socket.on('order_status_updated', fetchTableStatus);
       socket.on('table_cleared', fetchTableStatus);
+      socket.on('order_paid', fetchTableStatus); // Add listener for payment events
     }
 
     return () => {
@@ -41,6 +42,7 @@ const TableGrid: React.FC<TableGridProps> = ({ onSelectTable, selectedTable, all
         socket.off('new_order', fetchTableStatus);
         socket.off('order_status_updated', fetchTableStatus);
         socket.off('table_cleared', fetchTableStatus);
+        socket.off('order_paid', fetchTableStatus);
       }
     };
   }, [socket]);
@@ -48,7 +50,9 @@ const TableGrid: React.FC<TableGridProps> = ({ onSelectTable, selectedTable, all
   const getTableColor = (status: string, isSelected: boolean) => {
     if (isSelected) return 'border-blue-500 bg-blue-50 text-blue-700';
     switch (status) {
-      case 'OCCUPIED': return 'border-red-500 bg-red-50 text-red-700';
+      case 'OCCUPIED': 
+      case 'PARTIAL_PAID':
+        return 'border-red-500 bg-red-50 text-red-700';
       case 'SERVED': return 'border-orange-500 bg-orange-50 text-orange-700'; // Eating
       case 'PAID': return 'border-yellow-500 bg-yellow-50 text-yellow-700'; // Ready to leave
       case 'DIRTY': return 'border-gray-500 bg-gray-50 text-gray-700'; // Needs cleaning
@@ -64,7 +68,7 @@ const TableGrid: React.FC<TableGridProps> = ({ onSelectTable, selectedTable, all
         // - OCCUPIED: Disabled (Can't double book) -> Unless allowSelectionWhenOccupied is true (POS mode)
         // - DIRTY/PAID: Can Click (To Clear) -> Waiter needs to select it to clear it
         
-        const isOccupied = table.status === 'OCCUPIED' || table.status === 'SERVED';
+        const isOccupied = table.status === 'OCCUPIED' || table.status === 'SERVED' || table.status === 'PARTIAL_PAID';
         // Only disable if it's Occupied AND we are not in "Allow All" mode (POS) AND it's not Dirty/Paid (which needs clearing)
         const isDisabled = isOccupied && !allowSelectionWhenOccupied && table.status !== 'DIRTY' && table.status !== 'PAID';
         

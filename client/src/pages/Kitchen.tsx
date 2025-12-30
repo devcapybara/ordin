@@ -166,19 +166,46 @@ const Kitchen: React.FC = () => {
                   </div>
 
                   <div className="space-y-3 mb-4 max-h-[300px] overflow-y-auto">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-start">
-                        <div className="flex gap-2">
-                          <span className="font-bold text-lg min-w-[24px]">{item.quantity}x</span>
-                          <div>
-                            <span className="block font-medium">{item.productId.name}</span>
-                            {item.note && (
-                              <span className="text-yellow-400 text-sm italic">Note: {item.note}</span>
-                            )}
-                          </div>
-                        </div>
+                    {/* Pending Items (New) */}
+                    {order.items.some(i => i.status === 'PENDING') && (
+                      <div className="mb-2">
+                         <div className="text-xs font-bold text-yellow-500 uppercase tracking-wider mb-1">New Items</div>
+                         {order.items.filter(i => i.status === 'PENDING').map((item, idx) => (
+                            <div key={`pending-${idx}`} className="flex justify-between items-start bg-yellow-900/20 p-2 rounded mb-1">
+                              <div className="flex gap-2">
+                                <span className="font-bold text-lg min-w-[24px] text-yellow-400">{item.quantity}x</span>
+                                <div>
+                                  <span className="block font-medium text-white">{item.productId.name}</span>
+                                  {item.note && (
+                                    <span className="text-yellow-400 text-sm italic">Note: {item.note}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                         ))}
                       </div>
-                    ))}
+                    )}
+
+                    {/* In Progress / Done Items */}
+                    {order.items.some(i => i.status !== 'PENDING') && (
+                       <div>
+                          <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">In Progress / Ready</div>
+                          {order.items.filter(i => i.status !== 'PENDING').map((item, idx) => (
+                            <div key={`other-${idx}`} className="flex justify-between items-start opacity-60">
+                              <div className="flex gap-2">
+                                <span className="font-bold text-lg min-w-[24px]">{item.quantity}x</span>
+                                <div>
+                                  <span className="block font-medium">{item.productId.name}</span>
+                                  {item.note && (
+                                    <span className="text-gray-400 text-sm italic">Note: {item.note}</span>
+                                  )}
+                                  <span className="text-xs border border-gray-600 px-1 rounded ml-2">{item.status}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                       </div>
+                    )}
                   </div>
 
                   <div className="mt-auto pt-2 border-t border-gray-700">

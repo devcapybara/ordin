@@ -5,12 +5,14 @@ import EmployeeList from '../components/dashboard/EmployeeList';
 import FinanceDashboard from '../components/finance/FinanceDashboard';
 import ActivityLogViewer from '../components/dashboard/ActivityLogViewer';
 import RestaurantSettings from '../components/dashboard/RestaurantSettings';
+import PromoList from '../components/dashboard/PromoList';
+import InventoryList from '../components/dashboard/InventoryList';
 import api from '../services/api';
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({ totalSales: 0, totalOrders: 0 });
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'employees' | 'finance' | 'logs' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'employees' | 'finance' | 'logs' | 'settings' | 'promos' | 'inventory'>('overview');
 
   useEffect(() => {
     if (activeTab === 'overview') {
@@ -66,6 +68,7 @@ const Dashboard: React.FC = () => {
           {isManagerOrOwner && (
             <>
               {canAccessInventory && (
+                <>
                   <button
                     className={`pb-3 px-2 text-sm font-medium transition-colors ${
                       activeTab === 'products' 
@@ -76,6 +79,17 @@ const Dashboard: React.FC = () => {
                   >
                     Product Management
                   </button>
+                  <button
+                    className={`pb-3 px-2 text-sm font-medium transition-colors ${
+                      activeTab === 'inventory' 
+                        ? 'border-b-2 border-blue-600 text-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setActiveTab('inventory')}
+                  >
+                    Inventory
+                  </button>
+                </>
               )}
               <button
                 className={`pb-3 px-2 text-sm font-medium transition-colors ${
@@ -108,6 +122,16 @@ const Dashboard: React.FC = () => {
                 onClick={() => setActiveTab('logs')}
               >
                 Activity Logs
+              </button>
+              <button
+                className={`pb-3 px-2 text-sm font-medium transition-colors ${
+                  activeTab === 'promos' 
+                    ? 'border-b-2 border-blue-600 text-blue-600' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+                onClick={() => setActiveTab('promos')}
+              >
+                Promos
               </button>
               <button
                 className={`pb-3 px-2 text-sm font-medium transition-colors ${
@@ -159,6 +183,12 @@ const Dashboard: React.FC = () => {
             </div>
         )}
 
+        {activeTab === 'inventory' && isManagerOrOwner && canAccessInventory && (
+            <div className="animate-in fade-in duration-300">
+              <InventoryList />
+            </div>
+        )}
+
         {activeTab === 'employees' && isManagerOrOwner && (
             <div className="animate-in fade-in duration-300">
               <EmployeeList />
@@ -174,6 +204,12 @@ const Dashboard: React.FC = () => {
         {activeTab === 'logs' && isManagerOrOwner && (
             <div className="animate-in fade-in duration-300">
               <ActivityLogViewer />
+            </div>
+        )}
+
+        {activeTab === 'promos' && isManagerOrOwner && (
+            <div className="animate-in fade-in duration-300">
+              <PromoList />
             </div>
         )}
 

@@ -85,6 +85,12 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
           <span>Subtotal</span>
           <span>{subtotal.toLocaleString('id-ID')}</span>
         </div>
+        {order.discountAmount > 0 && (
+            <div className="flex justify-between">
+                <span>Discount {order.promoCode ? `(${order.promoCode})` : ''}</span>
+                <span>-{order.discountAmount.toLocaleString('id-ID')}</span>
+            </div>
+        )}
         <div className="flex justify-between">
           <span>Tax ({(taxRate * 100).toFixed(0)}%)</span>
           <span>{tax.toLocaleString('id-ID')}</span>

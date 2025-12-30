@@ -37,6 +37,11 @@ app.use('/api/tables', require('./routes/tables'));
 app.use('/api/restaurant', require('./routes/restaurants'));
 app.use('/api/logs', require('./routes/logs'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/promos', require('./routes/promos'));
+app.use('/api/shifts', require('./routes/shifts'));
+app.use('/api/ingredients', require('./routes/ingredients'));
+
+
 
 app.get('/', (req, res) => {
   res.send('API is running...');

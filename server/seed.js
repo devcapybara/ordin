@@ -69,6 +69,7 @@ const seedData = async () => {
         email: 'owner@ordin.com',
         role: 'OWNER',
         password: 'password123',
+        pin: '1234',
         restaurantId: restaurant._id
       },
       {
@@ -76,6 +77,7 @@ const seedData = async () => {
         email: 'manager@ordin.com',
         role: 'MANAGER',
         password: 'password123',
+        pin: '1234',
         restaurantId: restaurant._id
       },
       {
