@@ -17,6 +17,8 @@ const EmployeeList: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -45,9 +47,44 @@ const EmployeeList: React.FC = () => {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/users', formData);
-      alert('Employee created successfully!');
+      if (isEditMode && editId) {
+          // Update
+          const payload: any = { ...formData };
+          if (!payload.password) delete payload.password; // Don't send empty password
+          
+          await api.put(`/users/${editId}`, payload);
+          alert('Employee updated successfully!');
+      } else {
+          // Create
+          await api.post('/users', formData);
+          alert('Employee created successfully!');
+      }
+      
+      closeModal();
+      fetchEmployees();
+    } catch (error: any) {
+      console.error(error);
+      alert(error.response?.data?.message || 'Operation failed');
+    }
+  };
+
+  const openEditModal = (employee: Employee) => {
+      setFormData({
+          username: employee.username,
+          email: employee.email,
+          password: '', // Keep blank for edit unless changing
+          role: employee.role,
+          pin: '' // PIN is usually hidden, but allow setting new one
+      });
+      setEditId(employee._id);
+      setIsEditMode(true);
+      setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
       setIsModalOpen(false);
+      setIsEditMode(false);
+      setEditId(null);
       setFormData({
         username: '',
         email: '',
@@ -55,11 +92,6 @@ const EmployeeList: React.FC = () => {
         role: 'WAITER',
         pin: ''
       });
-      fetchEmployees();
-    } catch (error: any) {
-      console.error(error);
-      alert(error.response?.data?.message || 'Failed to create employee');
-    }
   };
 
   const handleDelete = async (id: string) => {
@@ -82,7 +114,7 @@ const EmployeeList: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800">Employee Management</h2>
             <p className="text-gray-500">Manage your staff accounts and roles</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
+        <Button onClick={() => { closeModal(); setIsModalOpen(true); }} className="flex items-center gap-2">
           <Plus size={20} /> Add Employee
         </Button>
       </div>
@@ -124,6 +156,18 @@ const EmployeeList: React.FC = () => {
                                 </td>
                                 <td className="p-4 text-sm text-gray-600">{emp.email}</td>
                                 <td className="p-4">
+                                    <div className="flex gap-2">
+                                    {/* Edit Button */}
+                                    {(user?.role === 'OWNER' || (user?.role === 'MANAGER' && emp.role !== 'OWNER' && emp.role !== 'MANAGER') || user?._id === emp._id) && (
+                                        <button 
+                                            onClick={() => openEditModal(emp)}
+                                            className="text-blue-600 hover:bg-blue-50 p-2 rounded transition-colors"
+                                            title="Edit Employee / Change PIN"
+                                        >
+                                            Edit / Set PIN
+                                        </button>
+                                    )}
+                                    
                                     {/* Prevent deleting self or higher roles (handled by backend too) */}
                                     {emp._id !== user?._id && (
                                         <button 
@@ -134,6 +178,7 @@ const EmployeeList: React.FC = () => {
                                             <Trash2 size={18} />
                                         </button>
                                     )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
@@ -146,7 +191,7 @@ const EmployeeList: React.FC = () => {
         )}
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add New Employee">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={isEditMode ? "Edit Employee / Set PIN" : "Add New Employee"}>
         <form onSubmit={handleCreate} className="space-y-4">
             <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
@@ -175,20 +220,23 @@ const EmployeeList: React.FC = () => {
                         className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                         value={formData.role}
                         onChange={e => setFormData({...formData, role: e.target.value})}
+                        disabled={isEditMode && formData.role === 'OWNER'} // Prevent downgrading owner easily
                     >
                         <option value="WAITER">Waiter</option>
                         <option value="CASHIER">Cashier</option>
                         <option value="KITCHEN">Kitchen</option>
-                        {canCreateManager && <option value="MANAGER">Manager</option>}
-                        {canCreateManager && <option value="ACCOUNTANT">Accountant (Finance)</option>}
+                        {(canCreateManager || formData.role === 'MANAGER') && <option value="MANAGER">Manager</option>}
+                        {(canCreateManager || formData.role === 'ACCOUNTANT') && <option value="ACCOUNTANT">Accountant (Finance)</option>}
                     </select>
                 </div>
                 <div>
-                     <label className="block text-sm font-medium text-gray-700 mb-1">PIN (Optional)</label>
+                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {isEditMode ? "New PIN (Leave blank to keep)" : "PIN (Optional)"}
+                     </label>
                     <input 
                         type="text" 
                         maxLength={6}
-                        placeholder="For mobile login"
+                        placeholder="For mobile login / Void Auth"
                         className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                         value={formData.pin}
                         onChange={e => setFormData({...formData, pin: e.target.value})}
@@ -196,18 +244,20 @@ const EmployeeList: React.FC = () => {
                 </div>
             </div>
             <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {isEditMode ? "New Password (Leave blank to keep)" : "Password"}
+                </label>
                 <input 
                     type="password" 
-                    required
+                    required={!isEditMode}
                     className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none"
                     value={formData.password}
                     onChange={e => setFormData({...formData, password: e.target.value})}
                 />
             </div>
             <div className="pt-4 flex justify-end gap-3">
-                <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-                <Button type="submit">Create Employee</Button>
+                <Button type="button" variant="secondary" onClick={closeModal}>Cancel</Button>
+                <Button type="submit">{isEditMode ? 'Update Employee' : 'Create Employee'}</Button>
             </div>
         </form>
       </Modal>

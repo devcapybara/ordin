@@ -55,9 +55,12 @@ const orderSchema = new mongoose.Schema({
   items: [orderItemSchema],
   status: { 
     type: String, 
-    enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PARTIAL_PAID', 'PAID', 'CANCELLED', 'COMPLETED'],
+    enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PARTIAL_PAID', 'PAID', 'CANCELLED', 'COMPLETED', 'VOID'],
     default: 'PENDING'
   },
+  voidReason: { type: String },
+  voidBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  voidAt: { type: Date },
   totalAmount: { type: Number, required: true },
   
   // Breakdown fields
@@ -107,6 +110,6 @@ const orderSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Ensure unique index for orderNumber per restaurant if needed, but global unique is better for Xendit
-orderSchema.index({ orderNumber: 1 }, { unique: true, sparse: true });
+// orderSchema.index({ orderNumber: 1 }, { unique: true, sparse: true }); // Removed due to duplicate warning
 
 module.exports = mongoose.model('Order', orderSchema);

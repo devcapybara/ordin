@@ -5,13 +5,13 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import TableGrid from '../components/waiter/TableGrid';
-import Receipt from '../components/pos/Receipt';
 import PaymentModal from '../components/pos/PaymentModal';
 import PinModal from '../components/pos/PinModal';
-import TransactionHistoryModal from '../components/pos/TransactionHistoryModal';
 import ShiftModals from '../components/pos/ShiftModals';
 import SplitBillModal from '../components/pos/SplitBillModal';
+import TransactionHistoryModal from '../components/pos/TransactionHistoryModal';
 import NoteModal from '../components/ui/NoteModal';
+import Receipt from '../components/pos/Receipt';
 import { useReactToPrint } from 'react-to-print';
 
 import { Plus, Minus, Trash2, LogOut, CheckCircle, LayoutGrid, Printer, RefreshCw, Search, History, Tag, Lock, Split, Edit3, MessageSquare } from 'lucide-react';
