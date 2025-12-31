@@ -41,10 +41,19 @@ const InventoryList: React.FC = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Ensure default values to prevent validation errors
+      const payload = {
+          ...currentIngredient,
+          unit: currentIngredient.unit || 'kg',
+          currentStock: Number(currentIngredient.currentStock) || 0,
+          minStock: Number(currentIngredient.minStock) || 0,
+          costPerUnit: Number(currentIngredient.costPerUnit) || 0
+      };
+
       if (currentIngredient._id) {
-        await api.put(`/ingredients/${currentIngredient._id}`, currentIngredient);
+        await api.put(`/ingredients/${currentIngredient._id}`, payload);
       } else {
-        await api.post('/ingredients', currentIngredient);
+        await api.post('/ingredients', payload);
       }
       setIsModalOpen(false);
       fetchIngredients();
@@ -90,7 +99,16 @@ const InventoryList: React.FC = () => {
             <h2 className="text-2xl font-bold text-gray-800">Inventory Management</h2>
             <p className="text-gray-500">Track your raw materials and stock levels</p>
         </div>
-        <Button onClick={() => { setCurrentIngredient({}); setIsModalOpen(true); }} className="flex items-center gap-2">
+        <Button onClick={() => { 
+            setCurrentIngredient({ 
+                name: '', 
+                unit: 'kg', 
+                currentStock: 0, 
+                minStock: 0, 
+                costPerUnit: 0 
+            }); 
+            setIsModalOpen(true); 
+        }} className="flex items-center gap-2">
           <Plus size={20} /> Add Ingredient
         </Button>
       </div>
