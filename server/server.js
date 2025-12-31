@@ -33,7 +33,8 @@ app.use(
         connectSrc: ["'self'", "https://api.cloudinary.com"], 
       },
     },
-    crossOriginResourcePolicy: { policy: "cross-origin" }
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    strictTransportSecurity: false // Disable HSTS for IP-based access
   })
 );
 app.use(cors());
