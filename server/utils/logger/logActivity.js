@@ -9,19 +9,29 @@ const ActivityLog = require('../../models/ActivityLog');
  * @param {object} metadata - Optional additional data (orderId, amount, etc.).
  */
 const logActivity = async (restaurantId, userId, action, description, metadata = {}) => {
+  console.log(`[LOGGER] Attempting to log: ${action} by ${userId} for Resto ${restaurantId}`);
+  
   try {
-    // Fire and forget - don't await if we don't want to block response, 
-    // but for safety in this context we'll just execute it.
-    await ActivityLog.create({
+    // Validate inputs
+    if (!restaurantId || !userId || !action) {
+      console.error('[LOGGER] Missing required fields:', { restaurantId, userId, action });
+      return;
+    }
+
+    const log = await ActivityLog.create({
       restaurantId,
       user: userId,
       action,
       description,
       metadata
     });
+    
+    console.log(`[LOGGER] Success! Log ID: ${log._id}`);
   } catch (error) {
-    console.error('Failed to log activity:', error);
-    // We don't throw here to avoid disrupting the main flow
+    console.error('[LOGGER] Failed to log activity:', error.message);
+    if (error.errors) {
+        console.error('[LOGGER] Validation errors:', JSON.stringify(error.errors, null, 2));
+    }
   }
 };
 

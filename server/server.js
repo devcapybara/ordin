@@ -22,7 +22,20 @@ const server = http.createServer(app);
 initSocket(server);
 
 // Middleware
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: ["'self'", "https://api.cloudinary.com"], 
+      },
+    },
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  })
+);
 app.use(cors());
 app.use(express.json());
 app.use(morgan('dev'));

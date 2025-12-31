@@ -28,7 +28,14 @@ const ActivityLogViewer: React.FC = () => {
   // Filters
   const [selectedUser, setSelectedUser] = useState('');
   const [selectedAction, setSelectedAction] = useState('');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Default Today
+  // Use local browser date instead of UTC
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  });
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -69,11 +76,12 @@ const ActivityLogViewer: React.FC = () => {
           setLogs(data);
           setTotalPages(1);
       } else {
-          setLogs(data.logs);
-          setTotalPages(data.pages);
+          setLogs(data.logs || []);
+          setTotalPages(data.pages || 1);
       }
     } catch (error) {
       console.error('Failed to fetch logs', error);
+      setLogs([]); // Ensure logs is reset to empty array on error
     } finally {
       setLoading(false);
     }
@@ -128,12 +136,16 @@ const ActivityLogViewer: React.FC = () => {
                 onChange={e => setSelectedDate(e.target.value)}
             />
             
-            {(selectedUser || selectedAction || selectedDate !== new Date().toISOString().split('T')[0]) && (
+            {(selectedUser || selectedAction || selectedDate !== new Date().toLocaleDateString('en-CA')) && (
                 <button 
                     onClick={() => {
                         setSelectedUser('');
                         setSelectedAction('');
-                        setSelectedDate(new Date().toISOString().split('T')[0]);
+                        const now = new Date();
+                        const year = now.getFullYear();
+                        const month = String(now.getMonth() + 1).padStart(2, '0');
+                        const day = String(now.getDate()).padStart(2, '0');
+                        setSelectedDate(`${year}-${month}-${day}`);
                     }}
                     className="text-xs text-red-500 hover:text-red-700 font-medium px-2"
                 >
@@ -148,7 +160,7 @@ const ActivityLogViewer: React.FC = () => {
             <div className="p-8 text-center text-gray-500">Loading logs...</div>
         ) : (
             <div className="divide-y">
-                {logs.length === 0 ? (
+                {!logs || logs.length === 0 ? (
                     <div className="p-8 text-center text-gray-500">No activity logs found for this date.</div>
                 ) : (
                     logs.map(log => (

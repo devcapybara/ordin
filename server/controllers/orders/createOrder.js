@@ -7,6 +7,9 @@ const paymentService = require('../../services/payment.service');
 
 const createOrder = async (req, res) => {
   try {
+    // DEBUG: Check user data
+    console.log('[DEBUG] createOrder called by user:', req.user._id, 'Resto:', req.user.restaurantId);
+
     const { items, tableNumber, totalAmount, paymentPayload, subtotal, taxAmount, serviceChargeAmount, discountAmount, promoCode } = req.body;
 
     if (!items || items.length === 0) {
@@ -124,13 +127,18 @@ const createOrder = async (req, res) => {
     io.to(`restaurant_${req.user.restaurantId}`).emit('new_order', populatedOrder);
 
     // Log Activity
-    logActivity(
-        req.user.restaurantId,
-        req.user._id,
-        'ORDER_CREATED',
-        `Order ${orderNumber} created for Table ${tableNumber}`,
-        { orderId: order._id, tableNumber, totalAmount }
-    );
+    try {
+        await logActivity(
+            req.user.restaurantId,
+            req.user._id,
+            'ORDER_CREATED',
+            `Order ${orderNumber} created for Table ${tableNumber}`,
+            { orderId: order._id, tableNumber, totalAmount }
+        );
+        console.log('[DEBUG] Activity logged successfully');
+    } catch (logErr) {
+        console.error('[DEBUG] Failed to log activity in createOrder:', logErr);
+    }
 
     res.status(201).json(populatedOrder);
   } catch (error) {
