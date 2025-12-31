@@ -123,17 +123,32 @@ const Dashboard: React.FC = () => {
               >
                 Promos
               </button>
+              {user?.role === 'OWNER' && (
+                  <button
+                    className={`pb-3 px-2 text-sm font-medium transition-colors ${
+                      activeTab === 'settings' 
+                        ? 'border-b-2 border-blue-600 text-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setActiveTab('settings')}
+                  >
+                    Settings
+                  </button>
+              )}
+            </>
+          )}
+
+          {isAccountant && canAccessFinance && (
               <button
                 className={`pb-3 px-2 text-sm font-medium transition-colors ${
-                  activeTab === 'settings' 
+                  activeTab === 'finance' 
                     ? 'border-b-2 border-blue-600 text-blue-600' 
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
-                onClick={() => setActiveTab('settings')}
+                onClick={() => setActiveTab('finance')}
               >
-                Settings
+                Finance & Reports
               </button>
-            </>
           )}
         </div>
         
@@ -204,7 +219,7 @@ const Dashboard: React.FC = () => {
             </div>
         )}
 
-        {activeTab === 'settings' && isManagerOrOwner && (
+        {activeTab === 'settings' && user?.role === 'OWNER' && (
             <div className="animate-in fade-in duration-300">
               <RestaurantSettings />
             </div>

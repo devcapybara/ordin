@@ -116,6 +116,7 @@ const EmployeeList: React.FC = () => {
                                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                         emp.role === 'MANAGER' ? 'bg-purple-100 text-purple-800' :
                                         emp.role === 'OWNER' ? 'bg-blue-100 text-blue-800' :
+                                        emp.role === 'ACCOUNTANT' ? 'bg-green-100 text-green-800' :
                                         'bg-gray-100 text-gray-800'
                                     }`}>
                                         {emp.role}
@@ -179,6 +180,7 @@ const EmployeeList: React.FC = () => {
                         <option value="CASHIER">Cashier</option>
                         <option value="KITCHEN">Kitchen</option>
                         {canCreateManager && <option value="MANAGER">Manager</option>}
+                        {canCreateManager && <option value="ACCOUNTANT">Accountant (Finance)</option>}
                     </select>
                 </div>
                 <div>
