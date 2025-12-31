@@ -24,17 +24,9 @@ initSocket(server);
 // Middleware
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        connectSrc: ["'self'", "https://api.cloudinary.com"], 
-      },
-    },
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    strictTransportSecurity: false // Disable HSTS for IP-based access
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    strictTransportSecurity: false, // Disable HSTS
   })
 );
 app.use(cors());
