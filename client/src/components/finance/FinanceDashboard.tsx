@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Modal from '../ui/Modal';
 import Button from '../ui/Button';
-import { DollarSign, TrendingUp, TrendingDown, Plus, Trash2 } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Expense {
   _id: string;
@@ -19,7 +19,7 @@ const FinanceDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Date Filter State
+  // Filters & Pagination
   const today = new Date();
   const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
   const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split('T')[0]; // End of month
@@ -28,6 +28,9 @@ const FinanceDashboard: React.FC = () => {
       startDate: firstDay,
       endDate: lastDay
   });
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   // Form
   const [formData, setFormData] = useState({
@@ -38,19 +41,29 @@ const FinanceDashboard: React.FC = () => {
   });
 
   useEffect(() => {
+    setPage(1); // Reset page when filters change
+  }, [dateFilter, categoryFilter]);
+
+  useEffect(() => {
     fetchData();
-  }, [dateFilter]); // Re-fetch when filter changes
+  }, [dateFilter, categoryFilter, page]);
 
   const fetchData = async () => {
     try {
         setLoading(true);
-        const query = `?startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}`;
+        const query = `?startDate=${dateFilter.startDate}&endDate=${dateFilter.endDate}&category=${categoryFilter}&page=${page}&limit=20`;
         
         const reportRes = await api.get(`/finance/report${query}`);
         setReport(reportRes.data);
 
         const expensesRes = await api.get(`/finance/expenses${query}`);
-        setExpenses(expensesRes.data);
+        if (expensesRes.data.expenses) {
+            setExpenses(expensesRes.data.expenses);
+            setTotalPages(expensesRes.data.pages);
+        } else {
+            setExpenses(expensesRes.data); // Fallback for old API format
+            setTotalPages(1);
+        }
     } catch (error) {
         console.error('Failed to fetch finance data', error);
     } finally {
@@ -99,25 +112,46 @@ const FinanceDashboard: React.FC = () => {
                <h2 className="text-xl font-bold text-gray-800">Financial Overview</h2>
                <p className="text-sm text-gray-500">Track your revenue, expenses, and profit</p>
            </div>
-           <div className="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-500 font-medium ml-1">Start Date</label>
-                    <input 
-                        type="date" 
-                        className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 focus:ring-0"
-                        value={dateFilter.startDate}
-                        onChange={e => setDateFilter({...dateFilter, startDate: e.target.value})}
-                    />
+           <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex gap-4 items-center bg-gray-50 p-2 rounded-lg border">
+                        <div className="flex flex-col">
+                            <label className="text-xs text-gray-500 font-medium ml-1">Start Date</label>
+                            <input 
+                                type="date" 
+                                className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 focus:ring-0"
+                                value={dateFilter.startDate}
+                                onChange={e => setDateFilter({...dateFilter, startDate: e.target.value})}
+                            />
+                        </div>
+                        <div className="w-px h-8 bg-gray-300"></div>
+                        <div className="flex flex-col">
+                            <label className="text-xs text-gray-500 font-medium ml-1">End Date</label>
+                            <input 
+                                type="date" 
+                                className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 focus:ring-0"
+                                value={dateFilter.endDate}
+                                onChange={e => setDateFilter({...dateFilter, endDate: e.target.value})}
+                            />
+                        </div>
                 </div>
-                <div className="w-px h-8 bg-gray-300"></div>
-                <div className="flex flex-col">
-                    <label className="text-xs text-gray-500 font-medium ml-1">End Date</label>
-                    <input 
-                        type="date" 
-                        className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 focus:ring-0"
-                        value={dateFilter.endDate}
-                        onChange={e => setDateFilter({...dateFilter, endDate: e.target.value})}
-                    />
+                
+                <div className="bg-gray-50 p-2 rounded-lg border min-w-[150px]">
+                    <div className="flex flex-col">
+                        <label className="text-xs text-gray-500 font-medium ml-1">Category</label>
+                        <select 
+                            className="bg-transparent border-none outline-none text-sm font-medium text-gray-700 focus:ring-0 w-full"
+                            value={categoryFilter}
+                            onChange={e => setCategoryFilter(e.target.value)}
+                        >
+                            <option value="">All Categories</option>
+                            <option value="INGREDIENTS">Ingredients</option>
+                            <option value="UTILITIES">Utilities</option>
+                            <option value="SALARIES">Salaries</option>
+                            <option value="RENT">Rent</option>
+                            <option value="MAINTENANCE">Maintenance</option>
+                            <option value="OTHER">Other</option>
+                        </select>
+                    </div>
                 </div>
            </div>
        </div>
@@ -217,6 +251,29 @@ const FinanceDashboard: React.FC = () => {
                     {expenses.length === 0 && (
                         <div className="p-8 text-center text-gray-500">No expenses recorded this month.</div>
                     )}
+                </div>
+            )}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="p-4 border-t flex justify-between items-center bg-gray-50">
+                    <button 
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronLeft size={20} className="text-gray-600" />
+                    </button>
+                    <span className="text-xs font-medium text-gray-600">
+                        Page {page} of {totalPages}
+                    </span>
+                    <button 
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <ChevronRight size={20} className="text-gray-600" />
+                    </button>
                 </div>
             )}
        </div>

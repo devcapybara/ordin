@@ -121,6 +121,18 @@ const TenantList: React.FC = () => {
     }
   };
 
+  const handleApprove = async (id: string) => {
+      if (!window.confirm('Are you sure you want to approve this tenant? This will activate their subscription.')) return;
+      try {
+          await api.put(`/admin/restaurants/${id}/approve`);
+          alert('Tenant approved successfully');
+          fetchRestaurants();
+      } catch (error) {
+          console.error(error);
+          alert('Failed to approve tenant');
+      }
+  };
+
   const filteredRestaurants = restaurants.filter(r => 
     r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     r.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase())
@@ -209,9 +221,11 @@ const TenantList: React.FC = () => {
                                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                             status === 'active' 
                                             ? 'bg-green-100 text-green-800' 
+                                            : status === 'pending_payment'
+                                            ? 'bg-orange-100 text-orange-800'
                                             : 'bg-red-100 text-red-800'
                                         }`}>
-                                            {status?.toUpperCase()}
+                                            {status?.toUpperCase().replace('_', ' ')}
                                         </span>
                                         <p className="text-xs text-gray-500 flex items-center gap-1">
                                             <Calendar size={12} />
@@ -234,6 +248,17 @@ const TenantList: React.FC = () => {
                                         >
                                             Edit
                                         </button>
+                                        
+                                        {status === 'pending_payment' && (
+                                            <button 
+                                                onClick={() => handleApprove(restaurant._id)}
+                                                className="text-orange-500 hover:bg-orange-50 p-1 rounded"
+                                                title="Approve Payment & Activate"
+                                            >
+                                                <CheckCircle size={20} />
+                                            </button>
+                                        )}
+
                                         {status === 'active' ? (
                                             <button 
                                                 onClick={() => handleStatusUpdate(restaurant._id, 'inactive')}

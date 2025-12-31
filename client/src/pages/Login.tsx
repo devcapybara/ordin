@@ -19,8 +19,8 @@ const Login: React.FC = () => {
       // A better approach is to navigate to root '/' and let RootRedirect handle it, 
       // OR update login to return the user object.
       
-      // For now, let's navigate to '/' which has the RootRedirect logic
-      navigate('/');
+      // For now, let's navigate to '/app' which has the RootRedirect logic
+      navigate('/app');
     } catch (err) {
       setError('Invalid email or password');
     }

@@ -11,9 +11,14 @@ const restaurantSchema = new mongoose.Schema({
       enum: ['BASIC', 'PRO', 'ENTERPRISE'], 
       default: 'BASIC' 
     },
+    billingCycle: {
+        type: String,
+        enum: ['MONTHLY', 'YEARLY'],
+        default: 'MONTHLY'
+    },
     status: { 
       type: String, 
-      enum: ['active', 'inactive', 'grace_period'], 
+      enum: ['active', 'inactive', 'grace_period', 'pending_payment'], 
       default: 'active' 
     },
     validUntil: { type: Date }
@@ -29,7 +34,8 @@ const restaurantSchema = new mongoose.Schema({
     serviceCharge: { type: Number, default: 0.05 },
     totalTables: { type: Number, default: 12 },
     receiptFooter: { type: String, default: 'Thank you for your visit!' }
-  }
+  },
+  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Restaurant', restaurantSchema);

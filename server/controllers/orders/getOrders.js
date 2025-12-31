@@ -2,10 +2,11 @@ const Order = require('../../models/Order');
 
 const getOrders = async (req, res) => {
   try {
-    const { status } = req.query;
+    const { status, startDate, endDate } = req.query;
     
     let query = { restaurantId: req.user.restaurantId };
     
+    // Status Filter
     if (status) {
       const statuses = status.split(',');
       if (statuses.length > 1) {
@@ -18,10 +19,29 @@ const getOrders = async (req, res) => {
       query.status = { $in: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PAID'] };
     }
 
+    // Date Range Filter (e.g., for History)
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        
+        query.createdAt = { $gte: start, $lte: end };
+    } else if (startDate) {
+        // Only start date provided (e.g. "Today")
+        const start = new Date(startDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(startDate);
+        end.setHours(23, 59, 59, 999);
+        
+        query.createdAt = { $gte: start, $lte: end };
+    }
+
     const orders = await Order.find(query)
       .populate('items.productId', 'name imageUrl')
       .populate('waiterId', 'username')
-      .sort({ createdAt: 1 }); // Oldest first
+      .sort({ createdAt: 1 }); // Oldest first (will be re-sorted by client if needed)
 
     res.json(orders);
   } catch (error) {

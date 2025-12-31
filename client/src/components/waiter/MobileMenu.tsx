@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { ShoppingCart, Plus, Minus, X } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, MessageSquare, Edit3 } from 'lucide-react';
 import Button from '../ui/Button';
+import NoteModal from '../ui/NoteModal';
 
 interface Product {
   _id: string;
@@ -33,6 +34,10 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  
+  // Note State
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [editingNoteItem, setEditingNoteItem] = useState<CartItem | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -95,6 +100,19 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
     }
   };
 
+  const handleOpenNoteModal = (item: CartItem) => {
+    setEditingNoteItem(item);
+    setIsNoteModalOpen(true);
+  };
+
+  const handleSaveNote = (note: string) => {
+    if (editingNoteItem) {
+      setCart(prev => prev.map(item => 
+        item._id === editingNoteItem._id ? { ...item, note } : item
+      ));
+    }
+  };
+
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   if (loading) return <div className="p-4 text-center">Loading menu...</div>;
@@ -120,20 +138,37 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
               const isModified = isNew || addedQty > 0;
 
               return (
-              <div key={item._id} className={`flex justify-between items-center border-b pb-4 ${isModified ? 'bg-yellow-50 p-2 -mx-2 rounded' : ''}`}>
-                <div>
-                  <h3 className="font-semibold flex items-center gap-2">
-                      {item.name}
-                      {isNew && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold">NEW</span>}
-                      {addedQty > 0 && <span className="text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full font-bold">+{addedQty}</span>}
-                  </h3>
-                  {isModified && <p className="text-xs text-yellow-600 italic mb-1">Additional Order</p>}
-                  <p className="text-blue-600">Rp {item.price.toLocaleString('id-ID')}</p>
+              <div key={item._id} className={`flex flex-col border-b pb-4 ${isModified ? 'bg-yellow-50 p-2 -mx-2 rounded' : ''}`}>
+                <div className="flex justify-between items-center mb-2">
+                  <div>
+                    <h3 className="font-semibold flex items-center gap-2">
+                        {item.name}
+                        {isNew && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold">NEW</span>}
+                        {addedQty > 0 && <span className="text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full font-bold">+{addedQty}</span>}
+                    </h3>
+                    {isModified && <p className="text-xs text-yellow-600 italic mb-1">Additional Order</p>}
+                    <p className="text-blue-600">Rp {item.price.toLocaleString('id-ID')}</p>
+                  </div>
+                  <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
+                    <button onClick={() => updateQuantity(item._id, -1)} className="p-1 hover:bg-white rounded"><Minus size={16} /></button>
+                    <span className="font-medium w-6 text-center">{item.quantity}</span>
+                    <button onClick={() => updateQuantity(item._id, 1)} className="p-1 hover:bg-white rounded"><Plus size={16} /></button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
-                  <button onClick={() => updateQuantity(item._id, -1)} className="p-1 hover:bg-white rounded"><Minus size={16} /></button>
-                  <span className="font-medium w-6 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item._id, 1)} className="p-1 hover:bg-white rounded"><Plus size={16} /></button>
+
+                <div className="flex items-start gap-2">
+                    <button 
+                      onClick={() => handleOpenNoteModal(item)}
+                      className={`text-xs flex items-center gap-1 px-2 py-1 rounded border ${item.note ? 'bg-blue-50 text-blue-600 border-blue-200' : 'text-gray-500 border-gray-200 hover:bg-gray-50'}`}
+                    >
+                      <MessageSquare size={12} />
+                      {item.note ? 'Edit Note' : 'Add Note'}
+                    </button>
+                    {item.note && (
+                      <p className="text-xs text-gray-600 italic bg-gray-50 p-1 px-2 rounded flex-1">
+                        "{item.note}"
+                      </p>
+                    )}
                 </div>
               </div>
             )})
@@ -153,6 +188,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
             {submitting ? 'Sending...' : 'Send to Kitchen'}
           </Button>
         </div>
+        
+        <NoteModal
+            isOpen={isNoteModalOpen}
+            onClose={() => setIsNoteModalOpen(false)}
+            onSave={handleSaveNote}
+            initialNote={editingNoteItem?.note}
+            itemName={editingNoteItem?.name}
+        />
       </div>
     );
   }
@@ -224,6 +267,14 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
           </button>
         </div>
       )}
+      
+      <NoteModal
+        isOpen={isNoteModalOpen}
+        onClose={() => setIsNoteModalOpen(false)}
+        onSave={handleSaveNote}
+        initialNote={editingNoteItem?.note}
+        itemName={editingNoteItem?.name}
+      />
     </div>
   );
 };

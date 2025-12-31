@@ -10,6 +10,7 @@ const getOrderByTable = require('../controllers/orders/getOrderByTable');
 const payOrder = require('../controllers/orders/payOrder');
 const updateOrder = require('../controllers/orders/updateOrder');
 const updateTicketStatus = require('../controllers/orders/updateTicketStatus');
+const voidOrder = require('../controllers/orders/voidOrder');
 
 router.use(protect);
 router.use(checkTenant);
@@ -23,6 +24,8 @@ router.route('/')
 router.get('/table/:tableNumber', getOrderByTable);
 
 router.put('/:orderId', updateOrder);
+
+router.post('/:id/void', voidOrder);
 
 router.route('/:id/status')
   .put(updateOrderStatus);

@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LogOut, Users, Settings, Activity } from 'lucide-react';
+import { LogOut, Users, Settings, Activity, UserPlus } from 'lucide-react';
 import TenantList from './TenantList';
+import SalesManagement from './SalesManagement';
+import GlobalSettings from './GlobalSettings';
 
 const AdminDashboard: React.FC = () => {
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'tenants' | 'settings'>('tenants');
+  const [activeTab, setActiveTab] = useState<'tenants' | 'sales' | 'settings'>('tenants');
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -28,6 +30,16 @@ const AdminDashboard: React.FC = () => {
           >
             <Users size={20} />
             Tenant Management
+          </button>
+
+          <button 
+            onClick={() => setActiveTab('sales')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
+              activeTab === 'sales' ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-700'
+            }`}
+          >
+            <UserPlus size={20} />
+            Sales Management
           </button>
           
           <button 
@@ -65,12 +77,8 @@ const AdminDashboard: React.FC = () => {
       <main className="flex-1 overflow-auto">
         <div className="p-8">
           {activeTab === 'tenants' && <TenantList />}
-          {activeTab === 'settings' && (
-            <div className="bg-white p-6 rounded-lg shadow-sm">
-                <h2 className="text-2xl font-bold mb-4">Global Settings</h2>
-                <p className="text-gray-500">Global SaaS configurations will go here.</p>
-            </div>
-          )}
+          {activeTab === 'sales' && <SalesManagement />}
+          {activeTab === 'settings' && <GlobalSettings />}
         </div>
       </main>
     </div>

@@ -9,6 +9,7 @@ interface OrderItem {
   productId: { name: string };
   quantity: number;
   status: string;
+  note?: string;
 }
 
 interface Order {
@@ -132,8 +133,13 @@ const OrderHistory: React.FC = () => {
             
             <div className="space-y-2 mb-3">
               {order.items.map(item => (
-                <div key={item._id} className="flex justify-between text-sm">
-                  <span>{item.quantity}x {item.productId?.name || 'Unknown'}</span>
+                <div key={item._id} className="text-sm">
+                  <div className="flex justify-between">
+                    <span>{item.quantity}x {item.productId?.name || 'Unknown'}</span>
+                  </div>
+                  {item.note && (
+                    <p className="text-xs text-gray-500 italic ml-4 mt-1">"{item.note}"</p>
+                  )}
                 </div>
               ))}
             </div>

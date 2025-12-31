@@ -12,7 +12,7 @@ import api from '../services/api';
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const [stats, setStats] = useState({ totalSales: 0, totalOrders: 0 });
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'employees' | 'finance' | 'logs' | 'settings' | 'promos' | 'inventory'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'employees' | 'finance' | 'settings' | 'promos' | 'inventory'>('overview');
 
   useEffect(() => {
     if (activeTab === 'overview') {
@@ -115,16 +115,6 @@ const Dashboard: React.FC = () => {
               )}
               <button
                 className={`pb-3 px-2 text-sm font-medium transition-colors ${
-                  activeTab === 'logs' 
-                    ? 'border-b-2 border-blue-600 text-blue-600' 
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('logs')}
-              >
-                Activity Logs
-              </button>
-              <button
-                className={`pb-3 px-2 text-sm font-medium transition-colors ${
                   activeTab === 'promos' 
                     ? 'border-b-2 border-blue-600 text-blue-600' 
                     : 'text-gray-500 hover:text-gray-700'
@@ -133,47 +123,69 @@ const Dashboard: React.FC = () => {
               >
                 Promos
               </button>
+              {user?.role === 'OWNER' && (
+                  <button
+                    className={`pb-3 px-2 text-sm font-medium transition-colors ${
+                      activeTab === 'settings' 
+                        ? 'border-b-2 border-blue-600 text-blue-600' 
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setActiveTab('settings')}
+                  >
+                    Settings
+                  </button>
+              )}
+            </>
+          )}
+
+          {isAccountant && canAccessFinance && (
               <button
                 className={`pb-3 px-2 text-sm font-medium transition-colors ${
-                  activeTab === 'settings' 
+                  activeTab === 'finance' 
                     ? 'border-b-2 border-blue-600 text-blue-600' 
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
-                onClick={() => setActiveTab('settings')}
+                onClick={() => setActiveTab('finance')}
               >
-                Settings
+                Finance & Reports
               </button>
-            </>
           )}
         </div>
         
         {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in duration-300">
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                  <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Sales (Today)</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">Rp {stats.totalSales.toLocaleString('id-ID')}</p>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                  <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Orders (Today)</p>
-                  <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalOrders}</p>
-                </div>
-                 <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                  <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Restaurant Status</p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">Active</p>
-                </div>
-                
-                {/* Upgrade Prompt for Basic Users */}
-                {!canAccessInventory && (
-                    <div className="col-span-3 bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex justify-between items-center">
-                        <div>
-                            <h4 className="font-bold text-yellow-800">Unlock Full Potential</h4>
-                            <p className="text-sm text-yellow-700">You are on the BASIC plan. Upgrade to PRO to access Inventory Management and Finance Reports.</p>
-                        </div>
-                        <button className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 text-sm font-medium">
-                            Contact Admin
-                        </button>
+            <div className="animate-in fade-in duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Sales (Today)</p>
+                      <p className="text-3xl font-bold text-gray-800 mt-2">Rp {stats.totalSales.toLocaleString('id-ID')}</p>
                     </div>
-                )}
+                    <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Total Orders (Today)</p>
+                      <p className="text-3xl font-bold text-gray-800 mt-2">{stats.totalOrders}</p>
+                    </div>
+                     <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                      <p className="text-gray-500 text-sm font-medium uppercase tracking-wider">Restaurant Status</p>
+                      <p className="text-3xl font-bold text-green-600 mt-2">Active</p>
+                    </div>
+                    
+                    {/* Upgrade Prompt for Basic Users */}
+                    {!canAccessInventory && (
+                        <div className="col-span-3 bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex justify-between items-center">
+                            <div>
+                                <h4 className="font-bold text-yellow-800">Unlock Full Potential</h4>
+                                <p className="text-sm text-yellow-700">You are on the BASIC plan. Upgrade to PRO to access Inventory Management and Finance Reports.</p>
+                            </div>
+                            <button className="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 text-sm font-medium">
+                                Contact Admin
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                {/* Activity Logs in Overview */}
+                <div className="mt-8">
+                     <ActivityLogViewer />
+                </div>
             </div>
         )}
 
@@ -201,19 +213,13 @@ const Dashboard: React.FC = () => {
             </div>
         )}
 
-        {activeTab === 'logs' && isManagerOrOwner && (
-            <div className="animate-in fade-in duration-300">
-              <ActivityLogViewer />
-            </div>
-        )}
-
         {activeTab === 'promos' && isManagerOrOwner && (
             <div className="animate-in fade-in duration-300">
               <PromoList />
             </div>
         )}
 
-        {activeTab === 'settings' && isManagerOrOwner && (
+        {activeTab === 'settings' && user?.role === 'OWNER' && (
             <div className="animate-in fade-in duration-300">
               <RestaurantSettings />
             </div>

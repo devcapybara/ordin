@@ -3,11 +3,14 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
 import Login from './pages/Login';
+import LandingPage from './pages/LandingPage';
+import SalesContact from './pages/SalesContact';
 import Dashboard from './pages/Dashboard';
 import POS from './pages/POS';
 import Kitchen from './pages/Kitchen';
 import Waiter from './pages/Waiter';
 import AdminDashboard from './pages/admin/AdminDashboard';
+import SalesDashboard from './pages/SalesDashboard';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -34,6 +37,8 @@ const RootRedirect: React.FC = () => {
   switch (user.role) {
     case 'SUPER_ADMIN':
       return <Navigate to="/admin" />;
+    case 'SALES':
+      return <Navigate to="/dashboard/sales" />;
     case 'CASHIER':
       return <Navigate to="/pos" />;
     case 'KITCHEN':
@@ -100,7 +105,18 @@ function App() {
               }
             />
 
-            <Route path="/" element={<RootRedirect />} />
+            <Route
+              path="/dashboard/sales"
+              element={
+                <ProtectedRoute>
+                  <SalesDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/sales-contact" element={<SalesContact />} />
+            <Route path="/app" element={<RootRedirect />} />
           </Routes>
         </Router>
       </SocketProvider>

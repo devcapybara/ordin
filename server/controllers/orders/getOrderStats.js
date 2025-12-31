@@ -14,7 +14,7 @@ const getOrderStats = async (req, res) => {
         $match: {
           restaurantId: restaurantId,
           createdAt: { $gte: today },
-          status: { $ne: 'CANCELLED' } // Exclude cancelled orders if any
+          status: { $nin: ['CANCELLED', 'VOID'] } // Exclude cancelled and voided orders
         }
       },
       {
