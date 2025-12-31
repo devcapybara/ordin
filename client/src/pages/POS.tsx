@@ -583,9 +583,9 @@ const POS: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="h-screen bg-gray-100 p-4 flex flex-col overflow-hidden">
       {/* Header */}
-      <header className="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm">
+      <header className="flex-none flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-gray-800">Ordin App</h1>
           <div className="flex gap-2">
@@ -628,22 +628,24 @@ const POS: React.FC = () => {
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-4 h-[calc(100vh-100px)]">
+      <div className="flex-1 grid grid-cols-12 gap-4 min-h-0">
         {/* Left Side: Menu or Tables */}
-        <div className="col-span-8 flex flex-col gap-4">
+        <div className="col-span-8 flex flex-col gap-4 h-full min-h-0">
             {viewMode === 'TABLES' ? (
-                <div className="bg-white p-6 rounded-lg shadow h-full overflow-y-auto">
-                    <h2 className="text-xl font-bold mb-4">Select Table</h2>
-                    <TableGrid 
-                        selectedTable={selectedTable}
-                        onSelectTable={handleTableSelect}
-                        allowSelectionWhenOccupied={true}
-                    />
-                    <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
-                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-50 border border-green-500 rounded"></div> Available</div>
-                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-50 border border-red-500 rounded"></div> Occupied / Partial</div>
-                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-50 border border-orange-500 rounded"></div> Served (Eating)</div>
-                        <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-50 border border-yellow-500 rounded"></div> Paid</div>
+                <div className="bg-white rounded-lg shadow h-full flex flex-col overflow-hidden">
+                    <div className="p-6 overflow-y-auto flex-1">
+                        <h2 className="text-xl font-bold mb-4">Select Table</h2>
+                        <TableGrid 
+                            selectedTable={selectedTable}
+                            onSelectTable={handleTableSelect}
+                            allowSelectionWhenOccupied={true}
+                        />
+                        <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
+                            <div className="flex items-center gap-2"><div className="w-4 h-4 bg-green-50 border border-green-500 rounded"></div> Available</div>
+                            <div className="flex items-center gap-2"><div className="w-4 h-4 bg-red-50 border border-red-500 rounded"></div> Occupied / Partial</div>
+                            <div className="flex items-center gap-2"><div className="w-4 h-4 bg-orange-50 border border-orange-500 rounded"></div> Served (Eating)</div>
+                            <div className="flex items-center gap-2"><div className="w-4 h-4 bg-yellow-50 border border-yellow-500 rounded"></div> Paid</div>
+                        </div>
                     </div>
                 </div>
             ) : (
@@ -681,7 +683,7 @@ const POS: React.FC = () => {
                 </div>
 
                 {/* Product Grid */}
-                <div className="flex-1 overflow-y-auto pr-2">
+                <div className="flex-1 overflow-y-auto pr-2 min-h-0">
                     {loading ? (
                     <div className="flex justify-center items-center h-64">Loading products...</div>
                     ) : (
