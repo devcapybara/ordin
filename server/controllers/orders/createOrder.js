@@ -7,9 +7,6 @@ const paymentService = require('../../services/payment.service');
 
 const createOrder = async (req, res) => {
   try {
-    // DEBUG: Check user data
-    console.log('[DEBUG] createOrder called by user:', req.user._id, 'Resto:', req.user.restaurantId);
-
     const { items, tableNumber, totalAmount, paymentPayload, subtotal, taxAmount, serviceChargeAmount, discountAmount, promoCode } = req.body;
 
     if (!items || items.length === 0) {
@@ -135,9 +132,8 @@ const createOrder = async (req, res) => {
             `Order ${orderNumber} created for Table ${tableNumber}`,
             { orderId: order._id, tableNumber, totalAmount }
         );
-        console.log('[DEBUG] Activity logged successfully');
     } catch (logErr) {
-        console.error('[DEBUG] Failed to log activity in createOrder:', logErr);
+        console.error('Failed to log activity:', logErr.message);
     }
 
     res.status(201).json(populatedOrder);
