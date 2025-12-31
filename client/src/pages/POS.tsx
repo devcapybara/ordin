@@ -11,13 +11,15 @@ import PinModal from '../components/pos/PinModal';
 import TransactionHistoryModal from '../components/pos/TransactionHistoryModal';
 import ShiftModals from '../components/pos/ShiftModals';
 import SplitBillModal from '../components/pos/SplitBillModal';
+import NoteModal from '../components/ui/NoteModal';
 import { useReactToPrint } from 'react-to-print';
 
-import { Plus, Minus, Trash2, LogOut, CheckCircle, LayoutGrid, Printer, RefreshCw, Search, History, Tag, Lock, Split } from 'lucide-react';
+import { Plus, Minus, Trash2, LogOut, CheckCircle, LayoutGrid, Printer, RefreshCw, Search, History, Tag, Lock, Split, Edit3, MessageSquare } from 'lucide-react';
 interface Product {
   _id: string;
   name: string;
   price: number;
+  category: string;
   imageUrl: string;
   isAvailable: boolean;
 }
@@ -53,6 +55,10 @@ const POS: React.FC = () => {
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   
+  // Note Modal State
+  const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [editingNoteItem, setEditingNoteItem] = useState<CartItem | null>(null);
+
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [splitItems, setSplitItems] = useState<any[]>([]);
   const [splitAmount, setSplitAmount] = useState(0);
@@ -147,16 +153,22 @@ const POS: React.FC = () => {
         setActiveBill(data);
         setProcessing(false);
         
-        const mappedCart: CartItem[] = data.items.map((item: any) => ({
-            _id: item.productId._id,
-            name: item.productId.name,
-            price: item.productId.price || item.unitPrice,
-            category: item.productId.category || '',
-            imageUrl: item.productId.imageUrl || '',
-            isAvailable: true,
-            quantity: item.quantity,
-            note: item.note
-        }));
+        // Only map items that have remaining quantity > 0
+        const mappedCart: CartItem[] = data.items.map((item: any) => {
+            const remaining = item.quantity - (item.paidQuantity || 0);
+            if (remaining <= 0) return null;
+
+            return {
+                _id: item.productId._id,
+                name: item.productId.name,
+                price: item.productId.price || item.unitPrice,
+                category: item.productId.category || '',
+                imageUrl: item.productId.imageUrl || '',
+                isAvailable: true,
+                quantity: remaining, // Use remaining quantity instead of total
+                note: item.note
+            };
+        }).filter((item: any) => item !== null);
 
         setCart(mappedCart);
         setPromoCode(data.promoCode || '');
@@ -808,6 +820,21 @@ const POS: React.FC = () => {
                             {isNew && <span className="ml-2 text-[10px] font-bold bg-yellow-100 text-yellow-700 px-1 rounded">NEW</span>}
                             {addedQty > 0 && <span className="ml-2 text-[10px] font-bold bg-green-100 text-green-700 px-1 rounded">+{addedQty}</span>}
                         </h4>
+                        {item.note ? (
+                            <p 
+                                className="text-xs text-gray-500 italic mt-0.5 flex items-center gap-1 cursor-pointer hover:text-blue-600"
+                                onClick={(e) => { e.stopPropagation(); setEditingNoteItem(item); setIsNoteModalOpen(true); }}
+                            >
+                                <Edit3 size={10} /> {item.note}
+                            </p>
+                        ) : (
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setEditingNoteItem(item); setIsNoteModalOpen(true); }}
+                                className="text-xs text-gray-400 hover:text-blue-600 flex items-center gap-1 mt-0.5"
+                            >
+                                <MessageSquare size={12} /> Add Note
+                            </button>
+                        )}
                         {(isNew || addedQty > 0) && <span className="text-xs text-yellow-600 italic">Confirm addition</span>}
                     </div>
                     <p className="font-semibold text-gray-900">
@@ -992,6 +1019,22 @@ const POS: React.FC = () => {
         }}
         title="Manager Authorization"
         message="Voiding items requires Manager PIN"
+      />
+
+      <NoteModal
+        isOpen={isNoteModalOpen}
+        onClose={() => setIsNoteModalOpen(false)}
+        onSave={(note) => {
+          if (editingNoteItem) {
+            setCart((prev) => prev.map((item) => 
+              item._id === editingNoteItem._id ? { ...item, note } : item
+            ));
+          }
+          setIsNoteModalOpen(false);
+          setEditingNoteItem(null);
+        }}
+        initialNote={editingNoteItem?.note}
+        itemName={editingNoteItem?.name}
       />
     </div>
   );
