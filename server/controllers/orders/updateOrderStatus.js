@@ -18,11 +18,19 @@ const updateOrderStatus = async (req, res) => {
 
     order.status = status;
     
-    // Also update item statuses if needed, simplified for now
+    // Also update item statuses and tickets if needed
     if (status === 'COOKING') {
       order.items.forEach(item => item.status = 'COOKING');
+      if (order.tickets) order.tickets.forEach(t => t.status = 'COOKING');
     } else if (status === 'READY') {
       order.items.forEach(item => item.status = 'READY');
+      if (order.tickets) order.tickets.forEach(t => t.status = 'READY');
+    } else if (status === 'SERVED') {
+      order.items.forEach(item => item.status = 'SERVED');
+      if (order.tickets) order.tickets.forEach(t => t.status = 'SERVED');
+    } else if (status === 'COMPLETED') {
+        order.items.forEach(item => item.status = 'COMPLETED');
+        if (order.tickets) order.tickets.forEach(t => t.status = 'COMPLETED');
     }
 
     await order.save();

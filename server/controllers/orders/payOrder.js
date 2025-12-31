@@ -21,6 +21,7 @@ const payOrder = async (req, res) => {
     // Determine Payment Amount
     let paymentAmount = 0;
     let itemsCovered = [];
+    let roundingAdjustment = 0;
 
     if (itemsToPay && itemsToPay.length > 0) {
         // SPLIT PAYMENT (By Items)
@@ -76,6 +77,14 @@ const payOrder = async (req, res) => {
         
         // Mark all as fully paid
         order.items.forEach(i => i.paidQuantity = i.quantity);
+    }
+
+    // Apply cash rounding to nearest 100
+    if (method === 'CASH') {
+        const STEP = 100;
+        const rounded = Math.round(paymentAmount / STEP) * STEP;
+        roundingAdjustment = rounded - paymentAmount;
+        paymentAmount = rounded;
     }
 
     // Process Payment via Service (Validate Amount)
@@ -141,6 +150,7 @@ const payOrder = async (req, res) => {
             // Actually, best to just send the paymentAmount as the Total for the receipt
             // and let Receipt component handle it.
             isSplitReceipt: !!itemsToPay,
+            roundingAdjustment: roundingAdjustment,
             payment: {
                 method: newPayment.method,
                 amount: newPayment.amount,

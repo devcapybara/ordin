@@ -103,7 +103,15 @@ const createOrder = async (req, res) => {
        
        // CRITICAL FIX: Order status should remain PENDING (for Kitchen) even if Payment is PAID.
        // Only payment.status tracks the money. 'status' tracks the fulfillment.
-       status: 'PENDING'
+       status: 'PENDING',
+       tickets: [{
+         items: items.map(it => ({
+           productId: it._id,
+           quantity: it.quantity,
+           note: it.note || ''
+         })),
+         createdAt: new Date()
+       }]
      });
 
     // Populate product details for the response and socket event

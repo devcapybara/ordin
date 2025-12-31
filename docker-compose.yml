@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # --- Application Service ---
+  app:
+    build: .
+    container_name: restaurant_app
+    restart: always
+    ports:
+      - "5000:5000" # Expose port 5000 to host
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/restaurant_db
+      - JWT_SECRET=rahasia_super_aman_ganti_ini
+    depends_on:
+      - mongo
+    networks:
+      - app-network
+
+  # --- Database Service ---
+  mongo:
+    image: mongo:6.0
+    container_name: restaurant_mongo
+    restart: always
+    volumes:
+      - mongo-data:/data/db # Persist data so it's not lost on restart
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:

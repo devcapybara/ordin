@@ -16,6 +16,14 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, totalAmoun
   const [amountReceived, setAmountReceived] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
+  const ROUND_STEP = 100;
+  const roundedTotal = method === PAYMENT_METHODS.CASH
+    ? Math.round(totalAmount / ROUND_STEP) * ROUND_STEP
+    : totalAmount;
+  const roundingAdjustment = method === PAYMENT_METHODS.CASH
+    ? (roundedTotal - totalAmount)
+    : 0;
+
   const handleConfirm = async () => {
     setLoading(true);
     try {
@@ -33,15 +41,27 @@ const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, totalAmoun
     }
   };
 
-  const change = method === PAYMENT_METHODS.CASH ? (Number(amountReceived) - totalAmount) : 0;
-  const isCashValid = method === PAYMENT_METHODS.CASH && Number(amountReceived) >= totalAmount;
+  const change = method === PAYMENT_METHODS.CASH ? (Number(amountReceived) - roundedTotal) : 0;
+  const isCashValid = method === PAYMENT_METHODS.CASH && Number(amountReceived) >= roundedTotal;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Complete Payment">
         <div className="space-y-6">
             <div className="text-center">
                 <p className="text-gray-500">Total Amount</p>
-                <p className="text-3xl font-bold text-gray-800">Rp {totalAmount.toLocaleString()}</p>
+                {method === PAYMENT_METHODS.CASH ? (
+                  <div className="space-y-1">
+                    <p className="text-3xl font-bold text-gray-800">Rp {roundedTotal.toLocaleString('id-ID')}</p>
+                    {roundingAdjustment !== 0 && (
+                      <div className="text-xs text-gray-600">
+                        Termasuk pembulatan: <span className="font-semibold">{roundingAdjustment > 0 ? '+' : ''}Rp {Math.abs(roundingAdjustment).toLocaleString('id-ID')}</span>
+                      </div>
+                    )}
+                    <div className="text-xs text-gray-500">Total asli: Rp {totalAmount.toLocaleString('id-ID')}</div>
+                  </div>
+                ) : (
+                  <p className="text-3xl font-bold text-gray-800">Rp {totalAmount.toLocaleString('id-ID')}</p>
+                )}
             </div>
 
             <div className="grid grid-cols-3 gap-3">

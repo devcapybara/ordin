@@ -164,7 +164,11 @@ const Waiter: React.FC = () => {
 
   const renderContent = () => {
     if (activeTab === 'orders') {
-      return <OrderHistory />;
+      return (
+        <div className="h-full overflow-y-auto">
+            <OrderHistory />
+        </div>
+      );
     }
 
     if (selectedTable) {

@@ -36,9 +36,10 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
 
   // Use the stored totalAmount if available to match DB, otherwise calculated
   const displayTotal = order.totalAmount || total;
+  const roundingAdjustment = order.roundingAdjustment || 0;
 
   return (
-    <div className="hidden print:block p-4 font-mono text-xs w-[80mm]" ref={ref}>
+    <div className="hidden print:block p-4 font-mono text-xs w=[80mm]" ref={ref}>
       <div className="text-center mb-4">
         <h1 className="text-xl font-bold">{finalName}</h1>
         <p>{address}</p>
@@ -100,6 +101,12 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
                 <span>Service ({(serviceRate * 100).toFixed(0)}%)</span>
                 <span>{service.toLocaleString('id-ID')}</span>
             </div>
+        )}
+        {roundingAdjustment !== 0 && (
+          <div className="flex justify-between">
+            <span>Pembulatan</span>
+            <span>{(roundingAdjustment > 0 ? '+' : '') + roundingAdjustment.toLocaleString('id-ID')}</span>
+          </div>
         )}
         <div className="flex justify-between font-bold text-sm mt-2 pt-2 border-t border-black">
           <span>TOTAL</span>

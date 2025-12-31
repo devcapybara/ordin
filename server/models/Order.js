@@ -89,6 +89,21 @@ const orderSchema = new mongoose.Schema({
 
   amountReceived: Number, // For Cash
   changeAmount: Number    // For Cash
+  ,
+  // Kitchen tickets: each addition creates a ticket card
+  tickets: [{
+    items: [{
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+      quantity: Number,
+      note: String
+    }],
+    status: { 
+      type: String, 
+      enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'COMPLETED'],
+      default: 'PENDING'
+    },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 // Ensure unique index for orderNumber per restaurant if needed, but global unique is better for Xendit

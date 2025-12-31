@@ -145,6 +145,7 @@ const POS: React.FC = () => {
         const { data } = await api.get(`/orders/table/${tableNumber}`);
         // Populate Cart with existing order items
         setActiveBill(data);
+        setProcessing(false);
         
         const mappedCart: CartItem[] = data.items.map((item: any) => ({
             _id: item.productId._id,
@@ -482,9 +483,9 @@ const POS: React.FC = () => {
       } catch (error: any) {
           console.error('Save failed', error);
           alert(error.response?.data?.message || 'Failed to save order');
-          setProcessing(false); // Only stop processing on error, success reloads
+          setProcessing(false);
       } finally {
-          // setProcessing(false); // Done in success/error blocks to handle reload flow
+          setProcessing(false);
       }
   };
 
@@ -563,13 +564,30 @@ const POS: React.FC = () => {
 
   const isOrderPaid = activeBill && activeBill.status === 'PAID';
   const subtotal = calculateSubtotal();
+  
+  const hasOrderChanges = () => {
+    if (!activeBill) return cart.length > 0;
+    const originalMap = new Map<string, number>();
+    activeBill.items.forEach((i: any) => {
+      const remaining = i.quantity - (i.paidQuantity || 0);
+      if (remaining > 0) originalMap.set(i.productId._id, remaining);
+    });
+    const cartMap = new Map<string, number>();
+    cart.forEach(i => cartMap.set(i._id, i.quantity));
+    if (originalMap.size !== cartMap.size) return true;
+    for (const [pid, qty] of cartMap.entries()) {
+      if (!originalMap.has(pid)) return true;
+      if (originalMap.get(pid) !== qty) return true;
+    }
+    return false;
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 p-4">
       {/* Header */}
       <header className="flex justify-between items-center mb-4 bg-white p-3 rounded-lg shadow-sm">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-800">Ordin POS</h1>
+          <h1 className="text-xl font-bold text-gray-800">Ordin App</h1>
           <div className="flex gap-2">
             <button 
                 onClick={() => setViewMode('MENU')}
@@ -895,7 +913,7 @@ const POS: React.FC = () => {
                 )}
                 <Button 
                   className="w-full py-3 text-lg bg-white text-blue-600 border border-blue-200 hover:bg-blue-50"
-                  disabled={(cart.length === 0) || processing || isOrderPaid}
+                  disabled={(cart.length === 0) || processing || isOrderPaid || (activeBill && !hasOrderChanges())}
                   onClick={() => handleCheckout('SAVE')}
                 >
                   {processing ? '...' : (activeBill ? 'Update Order' : 'Save Order')}

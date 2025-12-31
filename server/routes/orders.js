@@ -9,6 +9,7 @@ const getOrderStats = require('../controllers/orders/getOrderStats');
 const getOrderByTable = require('../controllers/orders/getOrderByTable');
 const payOrder = require('../controllers/orders/payOrder');
 const updateOrder = require('../controllers/orders/updateOrder');
+const updateTicketStatus = require('../controllers/orders/updateTicketStatus');
 
 router.use(protect);
 router.use(checkTenant);
@@ -25,6 +26,8 @@ router.put('/:orderId', updateOrder);
 
 router.route('/:id/status')
   .put(updateOrderStatus);
+
+router.put('/:orderId/tickets/:ticketId/status', updateTicketStatus);
 
 router.put('/:id/pay', payOrder);
 

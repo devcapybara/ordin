@@ -4,6 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const morgan = require('morgan');
 const helmet = require('helmet');
+const path = require('path');
 const connectDB = require('./config/database');
 const { initSocket } = require('./config/socket');
 const errorHandler = require('./middlewares/errorHandler');
@@ -41,11 +42,19 @@ app.use('/api/promos', require('./routes/promos'));
 app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/ingredients', require('./routes/ingredients'));
 
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../client/dist')));
 
-
-app.get('/', (req, res) => {
-  res.send('API is running...');
-});
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client/dist', 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.send('API is running...');
+  });
+}
 
 // Error Handler
 app.use(errorHandler);
