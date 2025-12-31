@@ -8,6 +8,9 @@ export default defineConfig({
   build: {
     sourcemap: 'hidden',
   },
+  server: {
+    allowedHosts: true, // Allow ngrok tunneling
+  },
   plugins: [
     react({
       babel: {

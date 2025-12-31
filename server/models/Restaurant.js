@@ -4,6 +4,7 @@ const restaurantSchema = new mongoose.Schema({
   name: { type: String, required: true },
   ownerEmail: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
+  address: { type: String, default: 'Jalan Makanan Enak No. 123' },
   subscription: {
     plan: { 
       type: String, 
@@ -26,7 +27,8 @@ const restaurantSchema = new mongoose.Schema({
   configs: {
     tax: { type: Number, default: 0.1 },
     serviceCharge: { type: Number, default: 0.05 },
-    totalTables: { type: Number, default: 12 }
+    totalTables: { type: Number, default: 12 },
+    receiptFooter: { type: String, default: 'Thank you for your visit!' }
   }
 }, { timestamps: true });
 

@@ -1,0 +1,10 @@
+version: "2"
+tunnels:
+  frontend:
+    proto: http
+    addr: 5173
+    domain: novelistically-deliquescent-shavonne.ngrok-free.dev
+  backend:
+    proto: http
+    addr: 5000
+    # Backend akan mendapatkan URL acak setiap kali dijalankan

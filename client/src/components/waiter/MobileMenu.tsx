@@ -9,23 +9,26 @@ interface Product {
   price: number;
   category: string;
   imageUrl: string;
+  description?: string;
   isAvailable: boolean;
 }
 
 interface CartItem extends Product {
   quantity: number;
   note?: string;
+  status?: string;
 }
 
 interface MobileMenuProps {
   tableNumber: string;
   onPlaceOrder: (items: CartItem[]) => Promise<void>;
   onCancel: () => void;
+  initialItems?: CartItem[];
 }
 
-const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCancel }) => {
+const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCancel, initialItems = [] }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(initialItems);
   const [activeCategory, setActiveCategory] = useState('All');
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
@@ -34,6 +37,12 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  useEffect(() => {
+    if (initialItems.length > 0) {
+        setCart(initialItems);
+    }
+  }, [initialItems]);
 
   const fetchProducts = async () => {
     try {
@@ -104,10 +113,21 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
           {cart.length === 0 ? (
             <div className="text-center text-gray-500 mt-10">Cart is empty</div>
           ) : (
-            cart.map(item => (
-              <div key={item._id} className="flex justify-between items-center border-b pb-4">
+            cart.map(item => {
+              const originalItem = initialItems.find(i => i._id === item._id);
+              const isNew = !originalItem;
+              const addedQty = originalItem ? item.quantity - originalItem.quantity : 0;
+              const isModified = isNew || addedQty > 0;
+
+              return (
+              <div key={item._id} className={`flex justify-between items-center border-b pb-4 ${isModified ? 'bg-yellow-50 p-2 -mx-2 rounded' : ''}`}>
                 <div>
-                  <h3 className="font-semibold">{item.name}</h3>
+                  <h3 className="font-semibold flex items-center gap-2">
+                      {item.name}
+                      {isNew && <span className="text-[10px] bg-yellow-200 text-yellow-800 px-1.5 py-0.5 rounded-full font-bold">NEW</span>}
+                      {addedQty > 0 && <span className="text-[10px] bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full font-bold">+{addedQty}</span>}
+                  </h3>
+                  {isModified && <p className="text-xs text-yellow-600 italic mb-1">Additional Order</p>}
                   <p className="text-blue-600">Rp {item.price.toLocaleString('id-ID')}</p>
                 </div>
                 <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-1">
@@ -116,7 +136,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
                   <button onClick={() => updateQuantity(item._id, 1)} className="p-1 hover:bg-white rounded"><Plus size={16} /></button>
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
 

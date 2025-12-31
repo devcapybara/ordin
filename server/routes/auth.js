@@ -5,10 +5,12 @@ const register = require('../controllers/auth/register');
 const login = require('../controllers/auth/login');
 const logout = require('../controllers/auth/logout');
 const getMe = require('../controllers/auth/getMe');
+const verifyPin = require('../controllers/auth/verifyPin');
 
 router.post('/register', register);
 router.post('/login', login);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
+router.post('/verify-pin', protect, verifyPin);
 
 module.exports = router;

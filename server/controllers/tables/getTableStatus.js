@@ -29,8 +29,10 @@ const getTableStatus = async (req, res) => {
         tables[tableIndex].orderId = order._id;
         
         // Priority: PAID (Dirty) > SERVED > OCCUPIED
-        if (order.status === 'PAID' || (order.payment && order.payment.status === 'PAID')) {
+        if (order.status === 'PAID') {
             tables[tableIndex].status = 'DIRTY'; 
+        } else if (order.status === 'PARTIAL_PAID') {
+            tables[tableIndex].status = 'PARTIAL_PAID';
         } else if (order.status === 'SERVED') {
             tables[tableIndex].status = 'SERVED';
         } else {

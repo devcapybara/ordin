@@ -13,7 +13,24 @@ const orderItemSchema = new mongoose.Schema({
     enum: ['PENDING', 'COOKING', 'READY', 'SERVED'],
     default: 'PENDING'
   },
-  unitPrice: { type: Number, required: true }
+  unitPrice: { type: Number, required: true },
+  paidQuantity: { type: Number, default: 0 } // Track how many of this item have been paid for
+});
+
+const paymentRecordSchema = new mongoose.Schema({
+  amount: { type: Number, required: true },
+  method: { type: String, required: true },
+  provider: { type: String, default: 'MANUAL' },
+  status: { type: String, enum: ['PAID', 'REFUNDED'], default: 'PAID' },
+  cashierId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  paidAt: { type: Date, default: Date.now },
+  note: String,
+  // Optional: Track which items were covered by this payment
+  items: [{
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+      quantity: Number,
+      amount: Number
+  }]
 });
 
 const orderSchema = new mongoose.Schema({
@@ -31,15 +48,30 @@ const orderSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId, 
     ref: 'User'
   },
+  cashierId: { 
+    type: mongoose.Schema.Types.ObjectId, 
+    ref: 'User'
+  },
   items: [orderItemSchema],
   status: { 
     type: String, 
-    enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PAID', 'CANCELLED', 'COMPLETED'],
+    enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'PARTIAL_PAID', 'PAID', 'CANCELLED', 'COMPLETED'],
     default: 'PENDING'
   },
   totalAmount: { type: Number, required: true },
   
-  // [NEW] Structured Payment Object
+  // Breakdown fields
+  subtotal: { type: Number },
+  taxAmount: { type: Number },
+  serviceChargeAmount: { type: Number },
+  discountAmount: { type: Number, default: 0 },
+  promoCode: { type: String },
+
+  // [NEW] Multiple Payments Support (Split Bill)
+  payments: [paymentRecordSchema],
+  totalPaid: { type: Number, default: 0 },
+
+  // [NEW] Structured Payment Object (Legacy/Summary)
   payment: {
     method: { type: String }, // 'CASH', 'BANK_TRANSFER', 'QRIS'
     provider: { type: String, enum: ['MANUAL', 'XENDIT'], default: 'MANUAL' },
@@ -57,6 +89,21 @@ const orderSchema = new mongoose.Schema({
 
   amountReceived: Number, // For Cash
   changeAmount: Number    // For Cash
+  ,
+  // Kitchen tickets: each addition creates a ticket card
+  tickets: [{
+    items: [{
+      productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+      quantity: Number,
+      note: String
+    }],
+    status: { 
+      type: String, 
+      enum: ['PENDING', 'COOKING', 'READY', 'SERVED', 'COMPLETED'],
+      default: 'PENDING'
+    },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, { timestamps: true });
 
 // Ensure unique index for orderNumber per restaurant if needed, but global unique is better for Xendit
