@@ -41,6 +41,8 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/promos', require('./routes/promos'));
 app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/ingredients', require('./routes/ingredients'));
+app.use('/api/sales', require('./routes/sales'));
+app.use('/api/config', require('./routes/config'));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

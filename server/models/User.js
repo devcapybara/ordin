@@ -12,10 +12,12 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   role: { 
     type: String, 
-    enum: ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN', 'ACCOUNTANT'],
+    enum: ['SUPER_ADMIN', 'OWNER', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN', 'ACCOUNTANT', 'SALES'],
     required: true 
   },
   pin: { type: String }, // For quick mobile login
+  region: { type: String }, // For Sales role
+  whatsappNumber: { type: String }, // For Sales role
   isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
