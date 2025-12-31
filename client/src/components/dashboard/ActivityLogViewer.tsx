@@ -71,12 +71,15 @@ const ActivityLogViewer: React.FC = () => {
       if (selectedDate) query += `date=${selectedDate}&`;
 
       const { data } = await api.get(`/logs${query}`);
+      
       // Handle both old array format (fallback) and new paginated format
       if (Array.isArray(data)) {
           setLogs(data);
           setTotalPages(1);
       } else {
-          setLogs(data.logs || []);
+          // Support both 'logs' (new backend) and 'data' (old backend) formats
+          const logsData = data.logs || data.data || [];
+          setLogs(logsData);
           setTotalPages(data.pages || 1);
       }
     } catch (error) {
