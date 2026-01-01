@@ -1,0 +1,103 @@
+INSTRUKSI TEKNIS: MODUL PEMBAYARAN KASIR (MANUAL PHASE)
+SUBJECT: IMPLEMENTASI MANUAL PAYMENT DENGAN STRUKTUR XENDIT-READY
+----------------------------------------------------------------
+
+TUJUAN:
+Saat ini, aplikasi hanya mencatat pembayaran secara manual (Tunai/Non-Tunai).
+NAMUN, struktur database dan kode backend HARUS dirancang agar "Xendit-Ready" (Future Proof). 
+Tujuannya agar saat integrasi Payment Gateway nanti, kita tidak perlu merombak ulang database.
+
+1. SPESIFIKASI FRONTEND (UI POS)
+--------------------------------
+Saat tombol "BAYAR" ditekan di keranjang belanja:
+
+A. Tampilkan Modal/Popup Pilihan Metode Pembayaran:
+   1. Tunai (Cash)
+   2. Transfer Bank
+   3. QRIS
+
+B. Logika UI (Manual Confirmation):
+   - Jika pilih [Tunai]: Input Nominal Diterima -> Hitung Kembalian -> Tombol "Selesaikan Transaksi".
+   - Jika pilih [Transfer Bank] atau [QRIS]:
+     * Tampilkan Alert/Info: "Pastikan pelanggan sudah melakukan transfer/scan ke rekening toko."
+     * Tombol: "Konfirmasi Pembayaran Diterima" (Ini akan menembak API dengan status PAID).
+
+----------------------------------------------------------------
+
+2. SPESIFIKASI DATABASE (MONGOOSE SCHEMA)
+-----------------------------------------
+Gunakan struktur Schema berikut pada `Order` agar kompatibel dengan API Xendit nanti.
+
+// File: models/Order.js
+const OrderSchema = new mongoose.Schema({
+  // ... field lain ...
+
+  // [PENTING] Ini nanti jadi 'external_id' di Xendit. 
+  // Generate unik, misal: "ORD-20231025-AX9Z"
+  orderNumber: { type: String, required: true, unique: true, index: true }, 
+
+  payment: {
+    // Pilihan: 'CASH', 'BANK_TRANSFER', 'QRIS'
+    method: { type: String, required: true }, 
+    
+    // Saat ini set 'MANUAL'. Nanti kalau pakai PG, set 'XENDIT'
+    provider: { type: String, enum: ['MANUAL', 'XENDIT'], default: 'MANUAL' }, 
+    
+    status: { 
+      type: String, 
+      enum: ['PENDING', 'PAID', 'FAILED'], 
+      default: 'PENDING' 
+    },
+    
+    // Siapkan field ini untuk masa depan (biarkan null dulu)
+    xenditDetails: {
+      invoiceId: String,  // Nanti diisi ID dari Xendit
+      paymentUrl: String, // Nanti diisi Link bayar
+      paidAt: Date
+    }
+  },
+
+  totalAmount: Number,
+  amountReceived: Number, // Inputan kasir (untuk Cash)
+  changeAmount: Number    // Kembalian
+}, { timestamps: true });
+
+----------------------------------------------------------------
+
+3. SPESIFIKASI BACKEND (SERVICE LAYER)
+--------------------------------------
+JANGAN tulis logika di Controller. Buat Service terpisah agar mudah diganti nanti.
+
+// File: services/payment.service.js
+exports.processPayment = async (orderData, paymentPayload) => {
+  const { method, amountReceived } = paymentPayload;
+
+  // LOGIKA SAAT INI (MANUAL)
+  // Kasir dianggap sudah memverifikasi uang masuk secara fisik/visual.
+  
+  return {
+    paymentStatus: 'PAID',
+    provider: 'MANUAL',
+    paidAt: new Date(),
+    method: method, // 'CASH' or 'QRIS' or 'BANK_TRANSFER'
+    amountReceived: amountReceived || orderData.totalAmount
+  };
+
+  /* FUTURE TODO (JANGAN DIIMPLEMENTASIKAN SEKARANG, CUKUP KOMENTAR):
+     if (provider === 'XENDIT') {
+        const xenditInvoice = await XenditAPI.createInvoice({...});
+        return {
+           paymentStatus: 'PENDING',
+           provider: 'XENDIT',
+           xenditDetails: { invoiceId: xenditInvoice.id, ... }
+        }
+     }
+  */
+};
+
+----------------------------------------------------------------
+
+4. CATATAN UNTUK DEVELOPER
+--------------------------
+- Meskipun saat ini QRIS/Transfer Bank dicatat secara manual (status langsung PAID), tolong pastikan Frontend mengirim payload yang benar (`method: 'QRIS'`, `provider: 'MANUAL'`).
+- Jangan hardcode string pembayaran di frontend. Gunakan Constants/Enums.
