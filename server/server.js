@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const path = require('path');
 const connectDB = require('./config/database');
 const { initSocket } = require('./config/socket');
+const { initRedis } = require('./config/redis');
 const errorHandler = require('./middlewares/errorHandler');
 
 // Load env vars
@@ -14,6 +15,8 @@ dotenv.config();
 
 // Connect to database
 connectDB();
+// Connect to Redis
+initRedis();
 
 const app = express();
 const server = http.createServer(app);

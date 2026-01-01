@@ -1,4 +1,5 @@
 const Product = require('../../models/Product');
+const { getRedis } = require('../../config/redis');
 
 const updateProduct = async (req, res) => {
   try {
@@ -27,6 +28,13 @@ const updateProduct = async (req, res) => {
     }
 
     const updatedProduct = await product.save();
+
+    // Invalidate Cache
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(`products:${req.user.restaurantId}`);
+    }
+
     res.json(updatedProduct);
   } catch (error) {
     console.error(error);

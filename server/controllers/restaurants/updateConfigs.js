@@ -1,4 +1,5 @@
 const Restaurant = require('../../models/Restaurant');
+const { getRedis } = require('../../config/redis');
 
 const updateConfigs = async (req, res) => {
   try {
@@ -21,6 +22,12 @@ const updateConfigs = async (req, res) => {
     if (receiptFooter !== undefined) restaurant.configs.receiptFooter = receiptFooter;
 
     await restaurant.save();
+
+    // Invalidate Cache
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(`restaurant_config:${req.user.restaurantId}`);
+    }
 
     res.json(restaurant);
   } catch (error) {

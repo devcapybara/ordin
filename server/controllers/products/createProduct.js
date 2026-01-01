@@ -1,4 +1,5 @@
 const Product = require('../../models/Product');
+const { getRedis } = require('../../config/redis');
 
 const createProduct = async (req, res) => {
   try {
@@ -17,6 +18,12 @@ const createProduct = async (req, res) => {
       description,
       isAvailable: true
     });
+
+    // Invalidate Cache
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(`products:${req.user.restaurantId}`);
+    }
 
     res.status(201).json(product);
   } catch (error) {

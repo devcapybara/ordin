@@ -1,22 +1,25 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SocketProvider } from './context/SocketContext';
-import Login from './pages/Login';
-import LandingPage from './pages/LandingPage';
-import SalesContact from './pages/SalesContact';
-import Dashboard from './pages/Dashboard';
-import POS from './pages/POS';
-import Kitchen from './pages/Kitchen';
-import Waiter from './pages/Waiter';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import SalesDashboard from './pages/SalesDashboard';
+import LoadingScreen from './components/ui/LoadingScreen';
+
+// Lazy Load Pages
+const Login = React.lazy(() => import('./pages/Login'));
+const LandingPage = React.lazy(() => import('./pages/LandingPage'));
+const SalesContact = React.lazy(() => import('./pages/SalesContact'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard'));
+const POS = React.lazy(() => import('./pages/POS'));
+const Kitchen = React.lazy(() => import('./pages/Kitchen'));
+const Waiter = React.lazy(() => import('./pages/Waiter'));
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const SalesDashboard = React.lazy(() => import('./pages/SalesDashboard'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <LoadingScreen />;
   }
 
   if (!user) {
@@ -30,7 +33,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 const RootRedirect: React.FC = () => {
   const { user, loading } = useAuth();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <LoadingScreen />;
 
   if (!user) return <Navigate to="/login" />;
 
@@ -57,67 +60,69 @@ function App() {
     <AuthProvider>
       <SocketProvider>
         <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            
-            <Route
-              path="/pos"
-              element={
-                <ProtectedRoute>
-                  <POS />
-                </ProtectedRoute>
-              }
-            />
+          <Suspense fallback={<LoadingScreen />}>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              
+              <Route
+                path="/pos"
+                element={
+                  <ProtectedRoute>
+                    <POS />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/kitchen"
-              element={
-                <ProtectedRoute>
-                  <Kitchen />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/kitchen"
+                element={
+                  <ProtectedRoute>
+                    <Kitchen />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/waiter"
-              element={
-                <ProtectedRoute>
-                  <Waiter />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/waiter"
+                element={
+                  <ProtectedRoute>
+                    <Waiter />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/dashboard/sales"
-              element={
-                <ProtectedRoute>
-                  <SalesDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dashboard/sales"
+                element={
+                  <ProtectedRoute>
+                    <SalesDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/sales-contact" element={<SalesContact />} />
-            <Route path="/app" element={<RootRedirect />} />
-          </Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/sales-contact" element={<SalesContact />} />
+              <Route path="/app" element={<RootRedirect />} />
+            </Routes>
+          </Suspense>
         </Router>
       </SocketProvider>
     </AuthProvider>
