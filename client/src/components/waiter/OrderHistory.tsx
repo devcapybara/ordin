@@ -30,7 +30,15 @@ const OrderHistory: React.FC = () => {
   const fetchOrders = async () => {
     try {
       const { data } = await api.get('/orders');
-      setOrders(data.sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+      
+      // Filter orders to only show those created today
+      const today = new Date().toDateString();
+      const todaysOrders = data.filter((order: Order) => {
+        const orderDate = new Date(order.createdAt).toDateString();
+        return orderDate === today;
+      });
+
+      setOrders(todaysOrders.sort((a: Order, b: Order) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
     } catch (error) {
       console.error('Failed to fetch orders', error);
     } finally {

@@ -17,7 +17,12 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
   const [search, setSearch] = useState('');
   
   // Date Filter State
-  const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Default Today
+  const [dateFilter, setDateFilter] = useState(() => {
+    const now = new Date();
+    const offset = now.getTimezoneOffset() * 60000;
+    const localDate = new Date(now.getTime() - offset);
+    return localDate.toISOString().split('T')[0];
+  });
 
   // Void State
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -29,12 +34,12 @@ const TransactionHistoryModal: React.FC<TransactionHistoryModalProps> = ({ isOpe
     if (isOpen) {
         fetchHistory();
     }
-  }, [isOpen]);
+  }, [isOpen, dateFilter]);
 
   const fetchHistory = async () => {
     try {
         setLoading(true);
-        const { data } = await api.get('/orders?status=PAID');
+        const { data } = await api.get(`/orders?status=PAID,COMPLETED,VOID&startDate=${dateFilter}`);
         
         const sorted = data.sort((a: any, b: any) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
