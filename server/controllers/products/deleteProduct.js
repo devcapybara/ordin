@@ -1,4 +1,5 @@
 const Product = require('../../models/Product');
+const { getRedis } = require('../../config/redis');
 
 const deleteProduct = async (req, res) => {
   try {
@@ -6,6 +7,12 @@ const deleteProduct = async (req, res) => {
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // Invalidate Cache
+    const redis = getRedis();
+    if (redis) {
+        await redis.del(`products:${req.user.restaurantId}`);
     }
 
     res.json({ message: 'Product removed' });
