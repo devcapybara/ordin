@@ -5,6 +5,7 @@ const http = require('http');
 const morgan = require('morgan');
 const helmet = require('helmet');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 const { initSocket } = require('./config/socket');
 const { initRedis } = require('./config/redis');
@@ -24,15 +25,31 @@ const server = http.createServer(app);
 // Initialize Socket.io
 initSocket(server);
 
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 500, // Limit each IP to 500 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use(limiter);
+
 // Middleware
 app.use(
   helmet({
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false,
-    strictTransportSecurity: false, // Disable HSTS
+    contentSecurityPolicy: process.env.NODE_ENV === 'production',
+    crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+    strictTransportSecurity: process.env.NODE_ENV === 'production' ? {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true
+    } : false, 
   })
 );
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || '*', // Restrict in production
+    credentials: true
+}));
 app.use(express.json());
 app.use(morgan('dev'));
 

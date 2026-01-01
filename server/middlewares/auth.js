@@ -11,7 +11,16 @@ const protect = async (req, res, next) => {
     try {
       token = req.headers.authorization.split(' ')[1];
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev_secret_key');
+      const secret = process.env.JWT_SECRET;
+      if (!secret) {
+          if (process.env.NODE_ENV === 'production') {
+              throw new Error('FATAL: JWT_SECRET is not defined in production environment.');
+          } else {
+              console.warn('WARNING: JWT_SECRET is not defined. Using unsafe default for development.');
+          }
+      }
+
+      const decoded = jwt.verify(token, secret || 'dev_secret_key');
 
       req.user = await User.findById(decoded.id).select('-password');
 
