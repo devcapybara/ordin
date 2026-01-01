@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
-import { ShoppingCart, Plus, Minus, X, MessageSquare, Edit3 } from 'lucide-react';
+import { ShoppingCart, Plus, Minus, X, MessageSquare, Edit3, Search } from 'lucide-react';
 import Button from '../ui/Button';
 import NoteModal from '../ui/NoteModal';
 
@@ -31,6 +31,7 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>(initialItems);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showCart, setShowCart] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -61,9 +62,11 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
   };
 
   const categories = ['All', ...new Set(products.map(p => p.category))];
-  const filteredProducts = activeCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === activeCategory);
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const addToCart = (product: Product) => {
     if (!product.isAvailable) return;
@@ -202,8 +205,22 @@ const MobileMenu: React.FC<MobileMenuProps> = ({ tableNumber, onPlaceOrder, onCa
 
   return (
     <div className="flex flex-col h-full relative">
+      {/* Search Bar */}
+      <div className="p-4 bg-white border-b pb-2 sticky top-0 z-10">
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <input
+                type="text"
+                placeholder="Search menu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+        </div>
+      </div>
+
       {/* Categories */}
-      <div className="p-4 overflow-x-auto whitespace-nowrap bg-white border-b no-scrollbar">
+      <div className="p-4 pt-2 overflow-x-auto whitespace-nowrap bg-white border-b no-scrollbar">
         {categories.map(cat => (
           <button
             key={cat}
