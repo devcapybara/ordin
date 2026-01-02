@@ -37,8 +37,16 @@ app.use(limiter);
 // Middleware
 app.use(
   helmet({
-    contentSecurityPolicy: process.env.NODE_ENV === 'production',
-    crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"], // Izinkan Cloudinary
+        scriptSrc: ["'self'", "'unsafe-inline'"], // Kadang butuh unsafe-inline untuk script tertentu
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        connectSrc: ["'self'", process.env.CLIENT_URL || "*"],
+      },
+    },
+    crossOriginEmbedderPolicy: false, // Matikan agar tidak ribet dengan resource cross-origin
     strictTransportSecurity: process.env.NODE_ENV === 'production' ? {
         maxAge: 31536000,
         includeSubDomains: true,
