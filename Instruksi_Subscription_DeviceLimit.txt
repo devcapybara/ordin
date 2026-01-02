@@ -1,0 +1,119 @@
+DOKUMEN INSTRUKSI PENGEMBANGAN V.2.0
+SUBJECT: IMPLEMENTASI SKEMA SUBSCRIPTION & DEVICE LIMITING
+STACK: MERN (MongoDB, Express, React, Node.js)
+-----------------------------------------------------------
+
+TUJUAN:
+Mengimplementasikan batasan akses fitur dan jumlah device berdasarkan Tier Langganan (Basic, Pro, Enterprise).
+
+1. DEFINISI PAKET LANGGANAN (BUSINESS RULES)
+--------------------------------------------
+Buat file konfigurasi terpisah (misal: `src/config/plans.js`) yang memuat aturan ini:
+
+A. PAKET BASIC (Rintisan)
+   - Max Concurrent Devices: 5 Sesi Aktif.
+   - Allowed Roles: OWNER, MANAGER, CASHIER, WAITER, KITCHEN.
+   - Blocked Roles: ACCOUNTANT.
+   - Blocked Features: Inventory Management (Stok), Finance Reports.
+
+B. PAKET PRO (Tumbuh)
+   - Max Concurrent Devices: 15 Sesi Aktif.
+   - Allowed Roles: ALL ROLES (Termasuk ACCOUNTANT).
+   - Allowed Features: Inventory Management, Finance Reports.
+   - Blocked Features: Custom Branding (White Label).
+
+C. PAKET ENTERPRISE (Bisnis)
+   - Max Concurrent Devices: UNLIMITED.
+   - Allowed Roles: ALL ROLES.
+   - Allowed Features: ALL FEATURES + Custom Branding (Logo & Warna Aplikasi).
+
+-----------------------------------------------------------
+
+2. UPDATE DATABASE SCHEMA
+-------------------------
+
+A. Update: Restaurant Schema
+   Tambahkan object `subscription` untuk menyimpan status paket.
+   
+   subscription: {
+     plan: { 
+       type: String, 
+       enum: ['BASIC', 'PRO', 'ENTERPRISE'], 
+       default: 'BASIC' 
+     },
+     status: { type: String, enum: ['ACTIVE', 'INACTIVE'], default: 'ACTIVE' },
+     validUntil: Date
+   }
+
+B. New Collection: ActiveSession
+   PENTING: Gunakan collection ini untuk menghitung "Device Limit". Jangan simpan di user token saja.
+   
+   {
+     userId: { type: ObjectId, ref: 'User' },
+     restaurantId: { type: ObjectId, ref: 'Restaurant', index: true },
+     deviceInfo: String,      // User Agent / Device Name
+     ipAddress: String,
+     refreshToken: String,
+     lastActiveAt: Date,
+     createdAt: { type: Date, expires: '24h' } // Auto-logout/clean jika tidak aktif 24 jam
+   }
+
+-----------------------------------------------------------
+
+3. LOGIKA MIDDLEWARE & CONTROLLER (IMPLEMENTATION)
+--------------------------------------------------
+
+A. LOGIKA SAAT LOGIN (Device Limiting)
+   Endpoint: POST /api/v1/auth/login
+   
+   Langkah-langkah di Controller:
+   1. Validasi Username & Password.
+   2. Ambil data `Restaurant` user tersebut, cek `subscription.plan`.
+   3. Hitung jumlah dokumen di collection `ActiveSession` milik `restaurantId` tersebut.
+   4. Cek Batasan:
+      - If (Plan == BASIC && Count >= 3) -> RETURN ERROR 403 "Device Limit Reached (Max 3)".
+      - If (Plan == PRO && Count >= 10) -> RETURN ERROR 403 "Device Limit Reached (Max 10)".
+   5. Jika lolos, buat dokumen `ActiveSession` baru.
+   6. Generate JWT Token.
+
+   Catatan: Saat POST /logout, wajib menghapus dokumen di `ActiveSession`.
+
+B. LOGIKA SAAT BUAT PEGAWAI (Role Restriction)
+   Endpoint: POST /api/v1/users (Hanya Owner/Manager)
+   
+   Langkah-langkah:
+   1. Cek `subscription.plan` dari requester.
+   2. Jika (Plan == BASIC) DAN (Role yang mau dibuat == 'ACCOUNTANT'):
+      -> RETURN ERROR 403 "Upgrade ke PRO untuk menambah Akuntan".
+
+C. LOGIKA AKSES FITUR (Middleware Guard)
+   Buat middleware khusus: `checkFeatureAccess(featureName)`
+   
+   Contoh Logic Middleware:
+   const checkFeatureAccess = (feature) => async (req, res, next) => {
+     const restaurant = req.restaurant; // Dari Auth Middleware sebelumnya
+     const plan = restaurant.subscription.plan;
+     
+     if (feature === 'INVENTORY' && plan === 'BASIC') {
+        return res.status(403).json({ 
+           code: 'UPGRADE_REQUIRED',
+           message: "Fitur Stok hanya tersedia di paket PRO/Enterprise" 
+        });
+     }
+     
+     if (feature === 'BRANDING' && plan !== 'ENTERPRISE') {
+        return res.status(403).json({ message: "Fitur khusus Enterprise" });
+     }
+     
+     next();
+   }
+
+   Implementasi di Route:
+   router.get('/inventory', auth, checkFeatureAccess('INVENTORY'), inventoryController.getAll);
+
+-----------------------------------------------------------
+
+4. CATATAN TAMBAHAN FRONTEND
+----------------------------
+- Jika API mengembalikan error code 'UPGRADE_REQUIRED', Frontend harus memunculkan Modal/Popup penawaran upgrade paket.
+- Sembunyikan menu "Stok" dan "Laporan Keuangan" di Sidebar jika user berada di Paket BASIC (Cek via Context API saat login).

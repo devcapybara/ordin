@@ -7,7 +7,7 @@ services:
     container_name: restaurant_app
     restart: always
     ports:
-      - "5000:5000" # Expose port 5000 to host
+      - "5000:5000" # Backup Direct Access
     environment:
       - NODE_ENV=production
       - PORT=5000
@@ -19,6 +19,20 @@ services:
       - REDIS_URI=redis://redis:6379
     depends_on:
       - redis
+    networks:
+      - app-network
+
+  # --- Nginx Web Server (Reverse Proxy) ---
+  nginx:
+    image: nginx:alpine
+    container_name: restaurant_nginx
+    restart: always
+    ports:
+      - "80:80" # Public Port
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - app
     networks:
       - app-network
 

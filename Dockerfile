@@ -20,7 +20,7 @@ WORKDIR /app
 # Setup Server Directory
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm install --production
+RUN npm install --production --legacy-peer-deps
 
 # Copy Server Source Code
 COPY server/ ./

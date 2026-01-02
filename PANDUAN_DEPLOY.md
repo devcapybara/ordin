@@ -27,7 +27,7 @@ cd ordin
 Jika folder `ordin` sudah ada, cukup masuk ke foldernya:
 ```bash
 cd ordin
-```
+```cd
 
 ## Langkah 3: Jalankan Script Deployment
 Kami telah membuat script `deploy.sh` untuk mempermudah proses.

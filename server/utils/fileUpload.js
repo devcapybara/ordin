@@ -16,10 +16,13 @@ const storage = new CloudinaryStorage({
     folder: 'ordin_pos', // Folder name in Cloudinary
     allowed_formats: ['jpg', 'png', 'jpeg', 'webp'], // Only allow images
     // resource_type: 'image', // Explicitly set to image (default)
-    transformation: [{ width: 500, height: 500, crop: 'limit' }], // Optional: resize on upload
+    transformation: [{ width: 500, height: 500, crop: 'limit', quality: 'auto', fetch_format: 'auto' }], // Resize & Optimize
   },
 });
 
-const upload = multer({ storage: storage });
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 1 * 1024 * 1024 }, // 1MB limit
+});
 
 module.exports = { upload, cloudinary };
