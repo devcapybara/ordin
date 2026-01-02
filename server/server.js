@@ -38,17 +38,20 @@ app.use(limiter);
 // Middleware
 app.use(
   helmet({
+    originAgentCluster: process.env.NODE_ENV === 'production',
     contentSecurityPolicy: {
+      useDefaults: false,
       directives: {
         defaultSrc: ["'self'"],
-        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"], // Izinkan Cloudinary
-        scriptSrc: ["'self'", "'unsafe-inline'"], // Kadang butuh unsafe-inline untuk script tertentu
+        imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         connectSrc: ["'self'", process.env.CLIENT_URL || "*"],
       },
     },
-    crossOriginEmbedderPolicy: false, // Matikan agar tidak ribet dengan resource cross-origin
-    strictTransportSecurity: false, // JANGAN nyalakan HSTS jika belum ada SSL/Domain valid
+    crossOriginOpenerPolicy: process.env.NODE_ENV === 'production' ? { policy: 'same-origin' } : false,
+    crossOriginEmbedderPolicy: false,
+    strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true, preload: false } : false,
   })
 );
 app.use(cors({
