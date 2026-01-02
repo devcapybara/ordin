@@ -1,4 +1,6 @@
 const { Server } = require('socket.io');
+const { createAdapter } = require('@socket.io/redis-adapter');
+const { createClient } = require('redis');
 
 let io;
 
@@ -9,6 +11,15 @@ const initSocket = (httpServer) => {
       methods: ['GET', 'POST'],
     },
   });
+
+  const redisUrl = process.env.REDIS_URI || 'redis://localhost:6379';
+  const pubClient = createClient({ url: redisUrl });
+  const subClient = pubClient.duplicate();
+  pubClient.connect().then(() => {
+    subClient.connect().then(() => {
+      io.adapter(createAdapter(pubClient, subClient));
+    });
+  }).catch(() => {});
 
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);

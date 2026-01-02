@@ -21,7 +21,7 @@ WORKDIR /app
 # Setup Server Directory
 WORKDIR /app/server
 COPY server/package*.json ./
-RUN npm install --production --legacy-peer-deps
+RUN npm install --production --legacy-peer-deps && npm install -g pm2
 
 # Copy Server Source Code
 COPY server/ ./
@@ -37,4 +37,4 @@ EXPOSE 5000
 ENV NODE_ENV=production
 
 # Start Server
-CMD ["node", "server.js"]
+CMD ["pm2-runtime", "server.js", "-i", "max"]
