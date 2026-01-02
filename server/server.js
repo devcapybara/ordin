@@ -48,11 +48,7 @@ app.use(
       },
     },
     crossOriginEmbedderPolicy: false, // Matikan agar tidak ribet dengan resource cross-origin
-    strictTransportSecurity: process.env.NODE_ENV === 'production' ? {
-        maxAge: 31536000,
-        includeSubDomains: true,
-        preload: true
-    } : false, 
+    strictTransportSecurity: false, // JANGAN nyalakan HSTS jika belum ada SSL/Domain valid
   })
 );
 app.use(cors({
