@@ -39,7 +39,16 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
   const roundingAdjustment = order.roundingAdjustment || 0;
 
   return (
-    <div className="hidden print:block p-4 font-mono text-xs w=[80mm]" ref={ref}>
+    <div
+      className="hidden print:block p-4 font-mono text-xs print:text-xs"
+      ref={ref}
+      style={{
+        width: '80mm',
+        margin: '0 auto',
+        backgroundColor: '#fff',
+        color: '#000'
+      }}
+    >
       <div className="text-center mb-4">
         <h1 className="text-xl font-bold">{finalName}</h1>
         <p>{address}</p>

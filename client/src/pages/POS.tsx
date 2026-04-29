@@ -117,10 +117,24 @@ const POS: React.FC = () => {
   };
 
   const handleReprint = (order: any) => {
+    if (!order) {
+      alert('No order data available to print');
+      return;
+    }
     setLastOrder(order);
+    // Give React time to render the updated receipt component
     setTimeout(() => {
-      handlePrint && handlePrint();
-    }, 100);
+      try {
+        if (receiptRef.current && handlePrint) {
+          handlePrint();
+        } else {
+          throw new Error('Receipt not ready for printing');
+        }
+      } catch (error) {
+        console.error('Print failed:', error);
+        alert('Failed to print receipt. Please try again.');
+      }
+    }, 150);
   };
 
   const fetchProducts = async () => {
@@ -746,7 +760,21 @@ const POS: React.FC = () => {
               <CheckCircle size={64} className="mb-4" />
               <h2 className="text-3xl font-bold">Payment Success!</h2>
               <div className="flex gap-4 mt-6">
-                <Button onClick={() => handlePrint && handlePrint()} className="bg-white text-green-600 hover:bg-gray-100 flex gap-2">
+                <Button
+                  onClick={() => {
+                    try {
+                      if (receiptRef.current && handlePrint) {
+                        handlePrint();
+                      } else {
+                        throw new Error('Receipt not ready');
+                      }
+                    } catch (error) {
+                      console.error('Print error:', error);
+                      alert('Failed to print. Please try again or use browser print function.');
+                    }
+                  }}
+                  className="bg-white text-green-600 hover:bg-gray-100 flex gap-2"
+                >
                     <Printer size={20} /> Print Receipt
                 </Button>
                 <Button onClick={() => setOrderSuccess(false)} variant="secondary" className="border-white text-white hover:bg-green-600">
@@ -959,8 +987,8 @@ const POS: React.FC = () => {
         </Card>
       </div>
 
-      {/* Hidden Receipt for Printing */}
-      <div className="hidden">
+      {/* Hidden Receipt for Printing - Use absolute positioning to keep in DOM */}
+      <div className="absolute -left-96 -top-96 w-96">
         <Receipt ref={receiptRef} order={lastOrder} configs={configs} />
       </div>
 
