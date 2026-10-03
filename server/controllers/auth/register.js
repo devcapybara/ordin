@@ -16,6 +16,10 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'Restaurant name is required for Owner registration' });
     }
 
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({ message: 'Restaurant phone is required' });
+    }
+
     // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
