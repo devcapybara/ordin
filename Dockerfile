@@ -10,7 +10,8 @@ RUN npm install
 COPY client/ ./
 # Set API URL to relative path for production build
 ENV VITE_API_URL=/api
-ENV VITE_SOCKET_URL=https://ordin.id
+# VITE_SOCKET_URL is intentionally unset: the socket connects to the same origin the page is served from.
+# A hardcoded domain here would break whenever the app runs on another host, and CSP connect-src 'self' would block it.
 # Build production files to /app/client/dist
 RUN npm run build
 

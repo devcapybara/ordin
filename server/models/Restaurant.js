@@ -4,7 +4,7 @@ const restaurantSchema = new mongoose.Schema({
   name: { type: String, required: true },
   ownerEmail: { type: String, required: true, unique: true },
   phone: { type: String, required: true },
-  address: { type: String, default: 'Jalan Makanan Enak No. 123' },
+  address: { type: String, default: '' }, // Printed on receipts only when set
   subscription: {
     plan: { 
       type: String, 
