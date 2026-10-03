@@ -5,6 +5,17 @@ const bcrypt = require('bcryptjs');
 // Load env vars
 dotenv.config();
 
+// This script wipes the database. Never run it against production, and never with a hardcoded password.
+if (process.env.NODE_ENV === 'production') {
+  console.error('Refusing to seed: this script deletes all data and must not run in production.');
+  process.exit(1);
+}
+const SEED_PASSWORD = process.env.SEED_PASSWORD;
+if (!SEED_PASSWORD) {
+  console.error('Set SEED_PASSWORD in the environment to choose the password for seeded accounts.');
+  process.exit(1);
+}
+
 // Import Models
 const User = require('./models/User');
 const Restaurant = require('./models/Restaurant');
@@ -30,14 +41,14 @@ const seedData = async () => {
 
     // 2. Hash Password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('password123', salt);
+    const hashedPassword = await bcrypt.hash(SEED_PASSWORD, salt);
 
     // 3. Create Super Admin
     console.log('👤 Creating Super Admin...');
     await User.create({
       username: 'superadmin',
       email: 'admin@ordin.com',
-      password: 'password123', // Will be hashed by pre-save hook if using create, but let's rely on model hook
+      password: SEED_PASSWORD, // Will be hashed by pre-save hook if using create, but let's rely on model hook
       role: 'SUPER_ADMIN',
       restaurantId: null
     });
@@ -68,7 +79,7 @@ const seedData = async () => {
         username: 'owner',
         email: 'owner@ordin.com',
         role: 'OWNER',
-        password: 'password123',
+        password: SEED_PASSWORD,
         pin: '1234',
         restaurantId: restaurant._id
       },
@@ -76,7 +87,7 @@ const seedData = async () => {
         username: 'manager',
         email: 'manager@ordin.com',
         role: 'MANAGER',
-        password: 'password123',
+        password: SEED_PASSWORD,
         pin: '1234',
         restaurantId: restaurant._id
       },
@@ -84,7 +95,7 @@ const seedData = async () => {
         username: 'cashier',
         email: 'cashier@ordin.com',
         role: 'CASHIER',
-        password: 'password123',
+        password: SEED_PASSWORD,
         pin: '1234',
         restaurantId: restaurant._id
       },
@@ -92,7 +103,7 @@ const seedData = async () => {
         username: 'waiter',
         email: 'waiter@ordin.com',
         role: 'WAITER',
-        password: 'password123',
+        password: SEED_PASSWORD,
         pin: '1234',
         restaurantId: restaurant._id
       },
@@ -100,7 +111,7 @@ const seedData = async () => {
         username: 'kitchen',
         email: 'kitchen@ordin.com',
         role: 'KITCHEN',
-        password: 'password123',
+        password: SEED_PASSWORD,
         restaurantId: restaurant._id
       }
     ];
@@ -159,7 +170,7 @@ const seedData = async () => {
 
     console.log('✅ Seeding Completed Successfully!');
     console.log('-----------------------------------');
-    console.log('🔑 Credentials (Password: password123):');
+    console.log('🔑 Credentials (password from SEED_PASSWORD):');
     console.log('   - Super Admin: admin@ordin.com');
     console.log('   - Owner: owner@ordin.com');
     console.log('   - Cashier: cashier@ordin.com (PIN: 1234)');

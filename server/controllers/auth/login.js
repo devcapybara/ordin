@@ -2,16 +2,33 @@ const User = require('../../models/User');
 const Restaurant = require('../../models/Restaurant');
 const ActiveSession = require('../../models/ActiveSession');
 const { generateToken } = require('../../services/auth/tokenService');
+const { isRoleDisabled } = require('../../services/roles');
 const logActivity = require('../../utils/logger/logActivity');
 
 const login = async (req, res) => {
   try {
-    const { email, password, pin } = req.body;
+    const { email, password } = req.body;
+
+    // Reject non-string values so objects like {"$ne": null} can't reach the Mongo query
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Find user by email
     const user = await User.findOne({ email });
 
     if (user && (await user.matchPassword(password))) {
+      // A turned-off role cannot sign in, even with the right password
+      if (user.restaurantId) {
+        const roleRestaurant = await Restaurant.findById(user.restaurantId);
+        if (isRoleDisabled(roleRestaurant, user.role)) {
+          return res.status(403).json({
+            code: 'ROLE_DISABLED',
+            message: `The ${user.role} role is turned off for this restaurant. Ask the owner to turn it on.`
+          });
+        }
+      }
+
       
       // Device Limiting Logic
       if (user.role !== 'SUPER_ADMIN' && user.restaurantId) {

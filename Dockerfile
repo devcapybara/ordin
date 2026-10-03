@@ -1,5 +1,5 @@
 # --- Stage 1: Build Frontend (React) ---
-FROM node:18-alpine as client-builder
+FROM node:22-alpine AS client-builder
 WORKDIR /app/client
 
 # Copy package.json client & install dependencies
@@ -10,12 +10,13 @@ RUN npm install
 COPY client/ ./
 # Set API URL to relative path for production build
 ENV VITE_API_URL=/api
-ENV VITE_SOCKET_URL=https://ordin.id
+# VITE_SOCKET_URL is intentionally unset: the socket connects to the same origin the page is served from.
+# A hardcoded domain here would break whenever the app runs on another host, and CSP connect-src 'self' would block it.
 # Build production files to /app/client/dist
 RUN npm run build
 
 # --- Stage 2: Setup Backend (Node.js) & Serve App ---
-FROM node:18-alpine
+FROM node:22-alpine
 WORKDIR /app
 
 # Setup Server Directory

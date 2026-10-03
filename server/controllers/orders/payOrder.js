@@ -123,7 +123,9 @@ const payOrder = async (req, res) => {
     await order.save();
 
     // Populate for response (Receipt needs product names)
-    const populatedOrder = await Order.findById(order._id).populate('items.productId');
+    const populatedOrder = await Order.findById(order._id)
+      .populate('items.productId')
+      .populate('waiterId', 'username');
 
     // Emit event
     const io = getIO();

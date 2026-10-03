@@ -5,6 +5,7 @@ const Restaurant = require('../../models/Restaurant');
 const { getIO } = require('../../config/socket');
 const logActivity = require('../../utils/logger/logActivity');
 const paymentService = require('../../services/payment.service');
+const { PromoError, resolvePromo, calculateOrderTotals } = require('../../services/orderTotals');
 
 const createOrder = async (req, res) => {
   try {
@@ -71,30 +72,24 @@ const createOrder = async (req, res) => {
         }
     }
 
-    // Apply Discount (If promo code logic exists, it should be validated here too)
-    // For now, we'll assume discountAmount comes from a trusted source or we need to recalculate it.
-    // Since promo logic is complex, let's assume 0 for now or rely on a validatePromo function.
-    // TODO: Validate promoCode against Promo model if provided.
-    let discountAmount = 0; 
-    // IF you have promo logic, uncomment and implement:
-    // if (promoCode) { const promo = await validatePromo(promoCode); discountAmount = calculateDiscount(subtotal, promo); }
-    // For now, to prevent client manipulation, we ignore req.body.discountAmount unless we validate it.
-    // If the client sends discountAmount, we should probably REJECT it or VALIDATE it.
-    // Safeguard: If user provided discountAmount, we should probably check it. 
-    // For this fix, I will set it to 0 or use the client's value ONLY IF we trust the client logic (which we shouldn't).
-    // Let's rely on the fact that we need to implement promo validation properly. 
-    // For now, I'll accept discountAmount ONLY if it's 0. If it's > 0, we'll strip it unless we validate.
-    // However, existing code might rely on client calc. I will log a warning if it differs? 
-    // Let's just use 0 for safety or keep it if it's not critical for this specific audit task (Price manipulation is the main one).
-    // Let's use 0 to be safe.
-    if (req.body.discountAmount) {
-        // console.warn('Client provided discountAmount ignored for security. Implement server-side promo validation.');
+    // Promo: the discount is always recalculated on the server. Any discountAmount sent by the client is ignored.
+    if (promoCode && typeof promoCode !== 'string') {
+        return res.status(400).json({ message: 'Invalid promo code' });
     }
+    let promo = { promoCode: undefined, discountAmount: 0 };
+    if (promoCode) {
+        try {
+            promo = await resolvePromo(req.user.restaurantId, promoCode, subtotal);
+        } catch (promoError) {
+            if (promoError instanceof PromoError) {
+                return res.status(400).json({ message: promoError.message });
+            }
+            throw promoError;
+        }
+    }
+    const discountAmount = promo.discountAmount;
 
-    // Calculate Final Totals
-    const taxAmount = subtotal * tax;
-    const serviceChargeAmount = subtotal * serviceCharge;
-    const totalAmount = subtotal + taxAmount + serviceChargeAmount - discountAmount;
+    const { taxAmount, serviceChargeAmount, totalAmount } = calculateOrderTotals({ subtotal, discountAmount, tax, serviceCharge });
 
     // 4. Update Ingredients (Parallel)
     const updatePromises = Object.keys(ingredientUpdates).map(ingId => 
@@ -150,8 +145,8 @@ const createOrder = async (req, res) => {
       subtotal, // Server calculated
       taxAmount, // Server calculated
       serviceChargeAmount, // Server calculated
-      discountAmount, // Safe default or validated
-      promoCode,
+      discountAmount, // Server calculated
+      promoCode: promo.promoCode,
       payment: paymentData,
       ...extraData,
       status: 'PENDING',

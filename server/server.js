@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
@@ -10,9 +11,13 @@ const connectDB = require('./config/database');
 const { initSocket } = require('./config/socket');
 const { initRedis } = require('./config/redis');
 const errorHandler = require('./middlewares/errorHandler');
+const { SharedRateLimitStore } = require('./utils/rateLimitStore');
 
 // Load env vars
 dotenv.config();
+
+// Fail fast if JWT_SECRET is missing in production
+require('./services/auth/tokenService').getJwtSecret();
 
 // Connect to database
 connectDB();
@@ -32,8 +37,23 @@ const limiter = rateLimit({
   max: 500, // Limit each IP to 500 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  store: new SharedRateLimitStore('rl:global:'),
 });
 app.use(limiter);
+
+// Stricter limit for guessable credentials. Only failed attempts count, so normal logins are not affected.
+// Keyed by IP: a restaurant's devices behind one NAT share the budget, so keep the number generous.
+const credentialLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  skipSuccessfulRequests: true,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many failed attempts. Try again in 15 minutes.' },
+  store: new SharedRateLimitStore('rl:credentials:'),
+});
+app.use('/api/auth/login', credentialLimiter);
+app.use('/api/auth/verify-pin', credentialLimiter);
 
 // Middleware
 app.use(
@@ -44,9 +64,9 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         imgSrc: ["'self'", "data:", "https://res.cloudinary.com"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        connectSrc: ["'self'", process.env.CLIENT_URL || "*"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // React inline style props need this
+        connectSrc: ["'self'", ...(process.env.CLIENT_URL ? [process.env.CLIENT_URL] : [])],
       },
     },
     crossOriginOpenerPolicy: process.env.NODE_ENV === 'production' ? { policy: 'same-origin' } : false,
@@ -77,6 +97,16 @@ app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/ingredients', require('./routes/ingredients'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/config', require('./routes/config'));
+
+// Health check for load balancers and Docker. Must stay above the production catch-all route.
+app.get('/api/health', (req, res) => {
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
+    database: dbConnected ? 'connected' : 'disconnected',
+    uptime: Math.round(process.uptime()),
+  });
+});
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

@@ -29,9 +29,22 @@ const EmployeeList: React.FC = () => {
     pin: ''
   });
 
+  const [disabledRoles, setDisabledRoles] = useState<string[]>([]);
+
   useEffect(() => {
     fetchEmployees();
+    fetchDisabledRoles();
   }, []);
+
+  // Roles the owner has turned off. They cannot be assigned, and staff who already hold them cannot sign in.
+  const fetchDisabledRoles = async () => {
+    try {
+      const { data } = await api.get('/restaurant/configs');
+      setDisabledRoles(data.configs?.disabledRoles || []);
+    } catch (error) {
+      console.error('Failed to fetch restaurant roles', error);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -153,6 +166,11 @@ const EmployeeList: React.FC = () => {
                                     }`}>
                                         {emp.role}
                                     </span>
+                                    {disabledRoles.includes(emp.role) && (
+                                    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                                        Turned off
+                                    </span>
+                                    )}
                                 </td>
                                 <td className="p-4 text-sm text-gray-600">{emp.email}</td>
                                 <td className="p-4">
@@ -222,9 +240,9 @@ const EmployeeList: React.FC = () => {
                         onChange={e => setFormData({...formData, role: e.target.value})}
                         disabled={isEditMode && formData.role === 'OWNER'} // Prevent downgrading owner easily
                     >
-                        <option value="WAITER">Waiter</option>
-                        <option value="CASHIER">Cashier</option>
-                        <option value="KITCHEN">Kitchen</option>
+                        {(!disabledRoles.includes('WAITER') || formData.role === 'WAITER') && <option value="WAITER">Waiter</option>}
+                        {(!disabledRoles.includes('CASHIER') || formData.role === 'CASHIER') && <option value="CASHIER">Cashier</option>}
+                        {(!disabledRoles.includes('KITCHEN') || formData.role === 'KITCHEN') && <option value="KITCHEN">Kitchen</option>}
                         {(canCreateManager || formData.role === 'MANAGER') && <option value="MANAGER">Manager</option>}
                         {(canCreateManager || formData.role === 'ACCOUNTANT') && <option value="ACCOUNTANT">Accountant (Finance)</option>}
                     </select>

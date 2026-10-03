@@ -1,46 +1,34 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const { authenticate } = require('../services/auth/tokenService');
 
 const protect = async (req, res, next) => {
-  let token;
+  const header = req.headers.authorization;
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
-    try {
-      token = req.headers.authorization.split(' ')[1];
-
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-          if (process.env.NODE_ENV === 'production') {
-              throw new Error('FATAL: JWT_SECRET is not defined in production environment.');
-          } else {
-              console.warn('WARNING: JWT_SECRET is not defined. Using unsafe default for development.');
-          }
-      }
-
-      const decoded = jwt.verify(token, secret || 'dev_secret_key');
-
-      req.user = await User.findById(decoded.id).select('-password');
-
-      next();
-    } catch (error) {
-      console.error(error);
-      res.status(401).json({ message: 'Not authorized, token failed' });
-    }
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Not authorized, no token' });
   }
 
-  if (!token) {
-    res.status(401).json({ message: 'Not authorized, no token' });
+  const token = header.split(' ')[1];
+
+  let user;
+  try {
+    user = await authenticate(token);
+  } catch (error) {
+    console.error('Auth failed:', error.message);
+    return res.status(401).json({ message: 'Not authorized, token failed' });
   }
+
+  req.user = user;
+  next();
 };
 
 const authorize = (...roles) => {
   return (req, res, next) => {
-    if (!req.user || !roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `User role ${req.user.role} is not authorized to access this route` 
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authorized' });
+    }
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        message: `User role ${req.user.role} is not authorized to access this route`
       });
     }
     next();

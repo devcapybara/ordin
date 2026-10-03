@@ -18,24 +18,27 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
 
   // Use configs name if available, otherwise prop, otherwise default
   const finalName = configs?.restaurantName || restaurantName;
-  const address = configs?.address || 'Jalan Makanan Enak No. 123';
-  const phone = configs?.phone || '0812-3456-7890';
+  // Only print what the restaurant has set. Placeholder text on a real receipt is worse than a missing line.
+  const address = configs?.address || '';
+  const phone = configs?.phone || '';
 
-  // Calculate based on items to show breakdown
-  const subtotal = order.items.reduce((acc: number, item: any) => {
+  // Prefer the amounts the server stored, so the receipt matches what was charged.
+  // Recalculating here could disagree with the server when a promo discount applies.
+  const itemsSubtotal = order.items.reduce((acc: number, item: any) => {
       const price = item.unitPrice || item.price || 0;
       return acc + (price * item.quantity);
   }, 0);
+  const subtotal = order.subtotal ?? itemsSubtotal;
+  const discount = order.discountAmount || 0;
 
   const taxRate = configs?.tax || 0.1;
   const serviceRate = configs?.serviceCharge || 0;
-  
-  const tax = Math.round(subtotal * taxRate);
-  const service = Math.round(subtotal * serviceRate);
-  const total = subtotal + tax + service;
 
-  // Use the stored totalAmount if available to match DB, otherwise calculated
-  const displayTotal = order.totalAmount || total;
+  const tax = Math.round(order.taxAmount ?? Math.max(0, subtotal - discount) * taxRate);
+  const service = Math.round(order.serviceChargeAmount ?? Math.max(0, subtotal - discount) * serviceRate);
+  const total = Math.round(Math.max(0, subtotal - discount) + tax + service);
+
+  const displayTotal = order.totalAmount ?? total;
   const roundingAdjustment = order.roundingAdjustment || 0;
 
   return (
@@ -51,8 +54,8 @@ const Receipt = forwardRef<HTMLDivElement, ReceiptProps>(({ order, restaurantNam
     >
       <div className="text-center mb-4">
         <h1 className="text-xl font-bold">{finalName}</h1>
-        <p>{address}</p>
-        <p>Telp: {phone}</p>
+        {address && <p>{address}</p>}
+        {phone && <p>Telp: {phone}</p>}
       </div>
 
       <div className="border-b border-dashed border-black mb-2 pb-2">

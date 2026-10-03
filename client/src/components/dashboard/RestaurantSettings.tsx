@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../services/api';
 import Button from '../ui/Button';
+import { useAuth } from '../../context/AuthContext';
+
+const STAFF_ROLES = [
+  { value: 'CASHIER', label: 'Cashier' },
+  { value: 'WAITER', label: 'Waiter' },
+  { value: 'KITCHEN', label: 'Kitchen' },
+];
 
 const RestaurantSettings: React.FC = () => {
+  const { user } = useAuth();
   const [configs, setConfigs] = useState({
     name: '',
     address: '',
@@ -10,7 +18,8 @@ const RestaurantSettings: React.FC = () => {
     totalTables: 12,
     tax: 0.1,
     serviceCharge: 0.05,
-    receiptFooter: 'Thank you for your visit!'
+    receiptFooter: 'Thank you for your visit!',
+    disabledRoles: [] as string[],
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -30,7 +39,8 @@ const RestaurantSettings: React.FC = () => {
         totalTables: data.configs?.totalTables || data.totalTables || 12,
         tax: data.configs?.tax ?? data.tax ?? 0.1,
         serviceCharge: data.configs?.serviceCharge ?? data.serviceCharge ?? 0.05,
-        receiptFooter: data.configs?.receiptFooter || data.receiptFooter || 'Thank you for your visit!'
+        receiptFooter: data.configs?.receiptFooter || data.receiptFooter || 'Thank you for your visit!',
+        disabledRoles: data.configs?.disabledRoles || [],
       });
     } catch (error) {
       console.error('Failed to fetch configs', error);
@@ -56,6 +66,15 @@ const RestaurantSettings: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const toggleRole = (role: string) => {
+    setConfigs(prev => ({
+      ...prev,
+      disabledRoles: prev.disabledRoles.includes(role)
+        ? prev.disabledRoles.filter(r => r !== role)
+        : [...prev.disabledRoles, role],
+    }));
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -181,6 +200,27 @@ const RestaurantSettings: React.FC = () => {
                 Text to display at the bottom of printed receipts.
             </p>
         </div>
+
+        {user?.role === 'OWNER' && (
+          <div className="bg-gray-50 p-4 rounded-lg space-y-3 border">
+            <h3 className="font-semibold text-gray-700 border-b pb-2">Staff Roles</h3>
+            <p className="text-sm text-gray-500">
+              Turn off a role your restaurant does not use. Staff with a turned-off role cannot sign in, and their current sessions stop working.
+            </p>
+            {STAFF_ROLES.map(role => (
+              <label key={role.value} className="flex items-center justify-between">
+                <span className="text-gray-700">{role.label}</span>
+                <input
+                  type="checkbox"
+                  checked={!configs.disabledRoles.includes(role.value)}
+                  onChange={() => toggleRole(role.value)}
+                  className="h-4 w-4"
+                />
+              </label>
+            ))}
+            <p className="text-xs text-gray-500">Owner and Manager are always on.</p>
+          </div>
+        )}
 
         <div className="pt-4">
           <Button type="submit" disabled={saving}>

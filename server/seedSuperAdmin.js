@@ -5,6 +5,13 @@ const User = require('./models/User');
 const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
+// Password comes from the environment. Never hardcode it in the repo.
+const ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error('Set SUPER_ADMIN_PASSWORD in the environment before running this script.');
+  process.exit(1);
+}
+
 const seedSuperAdmin = async () => {
   try {
     await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ordin_saas');
@@ -14,15 +21,15 @@ const seedSuperAdmin = async () => {
     const adminUser = await User.findOne({ email: adminEmail });
 
     if (adminUser) {
-      console.log('Super Admin already exists. Resetting password...');
-      adminUser.password = 'adminpassword';
+      console.log('Super Admin already exists. Setting password from SUPER_ADMIN_PASSWORD...');
+      adminUser.password = ADMIN_PASSWORD;
       await adminUser.save();
-      console.log('Super Admin password reset to: adminpassword');
+      console.log('Super Admin password updated.');
     } else {
       await User.create({
         username: 'SuperAdmin',
         email: adminEmail,
-        password: 'adminpassword', // Will be hashed by pre-save hook
+        password: ADMIN_PASSWORD, // Will be hashed by pre-save hook
         role: 'SUPER_ADMIN',
         restaurantId: null
       });
