@@ -5,7 +5,7 @@ const verifyPin = async (req, res) => {
     const { pin } = req.body;
     const { restaurantId } = req.user;
 
-    if (!pin) {
+    if (typeof pin !== 'string' || !pin) {
       return res.status(400).json({ message: 'PIN is required' });
     }
 

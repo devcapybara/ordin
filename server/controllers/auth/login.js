@@ -6,7 +6,12 @@ const logActivity = require('../../utils/logger/logActivity');
 
 const login = async (req, res) => {
   try {
-    const { email, password, pin } = req.body;
+    const { email, password } = req.body;
+
+    // Reject non-string values so objects like {"$ne": null} can't reach the Mongo query
+    if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     // Find user by email
     const user = await User.findOne({ email });

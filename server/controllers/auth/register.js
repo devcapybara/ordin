@@ -8,6 +8,10 @@ const register = async (req, res) => {
     // otherwise anyone could register as SUPER_ADMIN or join another tenant. Staff accounts are created by an owner.
     const { username, email, password, restaurantName, phone } = req.body;
 
+    if (typeof email !== 'string' || typeof password !== 'string' || typeof username !== 'string') {
+      return res.status(400).json({ message: 'Invalid registration data' });
+    }
+
     if (!restaurantName) {
       return res.status(400).json({ message: 'Restaurant name is required for Owner registration' });
     }
