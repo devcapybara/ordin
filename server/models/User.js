@@ -18,7 +18,8 @@ const userSchema = new mongoose.Schema({
   pin: { type: String }, // For quick mobile login
   region: { type: String }, // For Sales role
   whatsappNumber: { type: String }, // For Sales role
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  tokensValidAfter: { type: Number }, // Unix seconds; JWTs issued before this are revoked (set on logout)
 }, { timestamps: true });
 
 userSchema.pre('save', async function() {

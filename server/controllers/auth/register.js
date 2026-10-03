@@ -4,7 +4,13 @@ const { generateToken } = require('../../services/auth/tokenService');
 
 const register = async (req, res) => {
   try {
-    const { username, email, password, role, restaurantName, restaurantId, phone } = req.body;
+    // Public signup only creates a new restaurant owner. Role and restaurantId are never taken from the body,
+    // otherwise anyone could register as SUPER_ADMIN or join another tenant. Staff accounts are created by an owner.
+    const { username, email, password, restaurantName, phone } = req.body;
+
+    if (!restaurantName) {
+      return res.status(400).json({ message: 'Restaurant name is required for Owner registration' });
+    }
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -12,36 +18,20 @@ const register = async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    let userRestaurantId = restaurantId;
-
-    // If role is OWNER, create a new Restaurant
-    if (role === 'OWNER') {
-      if (!restaurantName) {
-        return res.status(400).json({ message: 'Restaurant name is required for Owner registration' });
-      }
-      
-      const restaurant = await Restaurant.create({
-        name: restaurantName,
-        ownerEmail: email,
-        phone: phone || '',
-        subscriptionExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // 1 year free trial for now
-      });
-      
-      userRestaurantId = restaurant._id;
-    } else {
-      // For non-owner, restaurantId is required
-      if (!userRestaurantId && role !== 'SUPER_ADMIN') {
-        return res.status(400).json({ message: 'Restaurant ID is required' });
-      }
-    }
+    const restaurant = await Restaurant.create({
+      name: restaurantName,
+      ownerEmail: email,
+      phone: phone || '',
+      subscriptionExpiry: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // 1 year free trial for now
+    });
 
     // Create User
     const user = await User.create({
       username,
       email,
       password,
-      role,
-      restaurantId: userRestaurantId,
+      role: 'OWNER',
+      restaurantId: restaurant._id,
     });
 
     if (user) {

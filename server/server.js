@@ -14,6 +14,9 @@ const errorHandler = require('./middlewares/errorHandler');
 // Load env vars
 dotenv.config();
 
+// Fail fast if JWT_SECRET is missing in production
+require('./services/auth/tokenService').getJwtSecret();
+
 // Connect to database
 connectDB();
 // Connect to Redis

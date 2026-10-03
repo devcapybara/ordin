@@ -16,7 +16,10 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     if (user && user.restaurantId) {
-      const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000');
+      // Server rejects connections without a valid token
+      const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+        auth: { token: localStorage.getItem('token') },
+      });
 
       newSocket.on('connect', () => {
         console.log('Socket connected');
