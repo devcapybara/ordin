@@ -33,7 +33,9 @@ const restaurantSchema = new mongoose.Schema({
     tax: { type: Number, default: 0.1 },
     serviceCharge: { type: Number, default: 0.05 },
     totalTables: { type: Number, default: 12 },
-    receiptFooter: { type: String, default: 'Thank you for your visit!' }
+    receiptFooter: { type: String, default: 'Thank you for your visit!' },
+    // Staff roles the owner has switched off. Empty means every role is on.
+    disabledRoles: { type: [{ type: String, enum: ['CASHIER', 'WAITER', 'KITCHEN'] }], default: [] }
   },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

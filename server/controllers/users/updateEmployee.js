@@ -1,4 +1,5 @@
 const User = require('../../models/User');
+const { isRoleDisabled } = require('../../services/roles');
 
 // @desc    Update employee
 // @route   PUT /api/users/:id
@@ -11,6 +12,11 @@ const updateEmployee = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Tenant check: an owner must never edit staff of another restaurant
+    if (!user.restaurantId || user.restaurantId.toString() !== req.user.restaurantId.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this user' });
+    }
+
     // Authorization check: Only Owner or Manager can update (and Manager cannot update Owner)
     // Note: Middleware already checks role, but extra safety here is good
     if (req.user.role === 'MANAGER' && user.role === 'OWNER') {
@@ -20,6 +26,11 @@ const updateEmployee = async (req, res) => {
     // Prevent Manager from updating another Manager (optional rule, but safer)
     if (req.user.role === 'MANAGER' && user.role === 'MANAGER' && req.user._id.toString() !== user._id.toString()) {
          return res.status(403).json({ message: 'Managers cannot update other Managers' });
+    }
+
+    // A role the owner has turned off cannot be assigned
+    if (req.body.role && req.body.role !== user.role && isRoleDisabled(req.restaurant, req.body.role)) {
+      return res.status(400).json({ message: `The ${req.body.role} role is turned off for this restaurant. Turn it on in Restaurant Settings first.` });
     }
 
     // Update fields

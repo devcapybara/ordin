@@ -1,4 +1,5 @@
 const User = require('../../models/User');
+const { isRoleDisabled } = require('../../services/roles');
 
 const createEmployee = async (req, res) => {
   try {
@@ -19,6 +20,10 @@ const createEmployee = async (req, res) => {
         if (role === 'SUPER_ADMIN') {
              return res.status(403).json({ message: 'Cannot create Super Admin.' });
         }
+    }
+
+    if (isRoleDisabled(req.restaurant, role)) {
+        return res.status(400).json({ message: `The ${role} role is turned off for this restaurant. Turn it on in Restaurant Settings first.` });
     }
 
     // Check existing

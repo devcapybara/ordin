@@ -2,6 +2,8 @@ const { Server } = require('socket.io');
 const { createAdapter } = require('@socket.io/redis-adapter');
 const { createClient } = require('redis');
 const { authenticate } = require('../services/auth/tokenService');
+const Restaurant = require('../models/Restaurant');
+const { isRoleDisabled } = require('../services/roles');
 
 let io;
 
@@ -21,6 +23,9 @@ const initSocket = (httpServer) => {
 
       const user = await authenticate(token);
       if (!user.restaurantId) return next(new Error('Not authorized, no restaurant'));
+
+      const restaurant = await Restaurant.findById(user.restaurantId);
+      if (isRoleDisabled(restaurant, user.role)) return next(new Error('Role is turned off for this restaurant'));
 
       socket.data.restaurantId = user.restaurantId.toString();
       next();

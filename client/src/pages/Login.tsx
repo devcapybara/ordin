@@ -22,7 +22,9 @@ const Login: React.FC = () => {
       // For now, let's navigate to '/app' which has the RootRedirect logic
       navigate('/app');
     } catch (err) {
-      setError('Invalid email or password');
+      // Show the server's reason when it has one (turned-off role, too many attempts)
+      const serverMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(serverMessage || 'Invalid email or password');
     }
   };
 

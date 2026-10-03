@@ -1,4 +1,5 @@
 const Restaurant = require('../models/Restaurant');
+const { isRoleDisabled } = require('../services/roles');
 
 const checkTenant = async (req, res, next) => {
   // Super Admin can access all data, so we might skip this or handle it specifically
@@ -30,6 +31,14 @@ const checkTenant = async (req, res, next) => {
 
     if (status !== 'active' && status !== 'grace_period') {
       return res.status(403).json({ message: 'Restaurant subscription is inactive' });
+    }
+
+    // The owner can switch off Cashier, Waiter or Kitchen. Their existing sessions stop working at once.
+    if (isRoleDisabled(restaurant, req.user.role)) {
+      return res.status(403).json({
+        code: 'ROLE_DISABLED',
+        message: `The ${req.user.role} role is turned off for this restaurant. Ask the owner to turn it on.`
+      });
     }
 
     // Attach restaurant to request for easy access
