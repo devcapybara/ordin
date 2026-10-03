@@ -1,6 +1,7 @@
 const Order = require('../../models/Order');
 const Product = require('../../models/Product');
 const Restaurant = require('../../models/Restaurant');
+const Ingredient = require('../../models/Ingredient');
 const { getIO } = require('../../config/socket');
 const logActivity = require('../../utils/logger/logActivity');
 const { PromoError, resolvePromo, calculateOrderTotals } = require('../../services/orderTotals');
@@ -33,7 +34,7 @@ const updateOrder = async (req, res) => {
     const products = await Product.find({
       _id: { $in: productIds },
       restaurantId: req.user.restaurantId,
-    });
+    }).populate('recipe.ingredientId');
 
     const restaurant = await Restaurant.findById(req.user.restaurantId);
     if (!restaurant) {
@@ -56,7 +57,7 @@ const updateOrder = async (req, res) => {
       }
 
       subtotal += product.price * quantity;
-      lines.push({ prodId, quantity, price: product.price, note: item.note });
+      lines.push({ prodId, quantity, price: product.price, note: item.note, product });
     }
 
     // Promo: a code the client just entered must be valid. A code that was already on the order and
@@ -157,6 +158,25 @@ const updateOrder = async (req, res) => {
     }
 
     await order.save();
+
+    // Deduct ingredients for quantities added in this update, same as createOrder does for new orders.
+    // Runs after save so a failed save never touches stock.
+    const ingredientUpdates = {};
+    lines.forEach(line => {
+      const prev = existingItemsMap.get(line.prodId);
+      const increase = line.quantity - (prev ? prev.quantity : 0);
+      if (increase <= 0 || !line.product.recipe) return;
+      line.product.recipe.forEach(ing => {
+        if (!ing.ingredientId) return; // ingredient was deleted
+        const ingId = ing.ingredientId._id.toString();
+        ingredientUpdates[ingId] = (ingredientUpdates[ingId] || 0) + ing.quantity * increase;
+      });
+    });
+    await Promise.all(
+      Object.entries(ingredientUpdates).map(([ingId, amount]) =>
+        Ingredient.findByIdAndUpdate(ingId, { $inc: { currentStock: -amount } })
+      )
+    );
 
     const populatedOrder = await Order.findById(order._id)
       .populate('items.productId', 'name imageUrl')

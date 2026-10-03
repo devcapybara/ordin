@@ -11,6 +11,7 @@ const connectDB = require('./config/database');
 const { initSocket } = require('./config/socket');
 const { initRedis } = require('./config/redis');
 const errorHandler = require('./middlewares/errorHandler');
+const { SharedRateLimitStore } = require('./utils/rateLimitStore');
 
 // Load env vars
 dotenv.config();
@@ -36,6 +37,7 @@ const limiter = rateLimit({
   max: 500, // Limit each IP to 500 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  store: new SharedRateLimitStore('rl:global:'),
 });
 app.use(limiter);
 
@@ -48,6 +50,7 @@ const credentialLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { message: 'Too many failed attempts. Try again in 15 minutes.' },
+  store: new SharedRateLimitStore('rl:credentials:'),
 });
 app.use('/api/auth/login', credentialLimiter);
 app.use('/api/auth/verify-pin', credentialLimiter);
