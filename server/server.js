@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const http = require('http');
@@ -93,6 +94,16 @@ app.use('/api/shifts', require('./routes/shifts'));
 app.use('/api/ingredients', require('./routes/ingredients'));
 app.use('/api/sales', require('./routes/sales'));
 app.use('/api/config', require('./routes/config'));
+
+// Health check for load balancers and Docker. Must stay above the production catch-all route.
+app.get('/api/health', (req, res) => {
+  const dbConnected = mongoose.connection.readyState === 1;
+  res.status(dbConnected ? 200 : 503).json({
+    status: dbConnected ? 'ok' : 'degraded',
+    database: dbConnected ? 'connected' : 'disconnected',
+    uptime: Math.round(process.uptime()),
+  });
+});
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {

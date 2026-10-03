@@ -29,14 +29,23 @@ const initSocket = (httpServer) => {
     }
   });
 
+  // Redis lets several PM2 workers share socket events. Without it, sockets still work on a single process.
   const redisUrl = process.env.REDIS_URI || 'redis://localhost:6379';
   const pubClient = createClient({ url: redisUrl });
   const subClient = pubClient.duplicate();
-  pubClient.connect().then(() => {
-    subClient.connect().then(() => {
+
+  // Without an 'error' listener, a Redis error event crashes the process
+  pubClient.on('error', (err) => console.error('Socket Redis (pub) error:', err.message));
+  subClient.on('error', (err) => console.error('Socket Redis (sub) error:', err.message));
+
+  Promise.all([pubClient.connect(), subClient.connect()])
+    .then(() => {
       io.adapter(createAdapter(pubClient, subClient));
+      console.log('Socket.io Redis adapter enabled');
+    })
+    .catch((err) => {
+      console.warn('Socket.io Redis adapter disabled, running single-process only:', err.message);
     });
-  }).catch(() => {});
 
   io.on('connection', (socket) => {
     console.log('New client connected:', socket.id);
